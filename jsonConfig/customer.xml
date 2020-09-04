@@ -1,0 +1,50 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:idow="http://frontstep.com/IDOWebService" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <soapenv:Header/>
+    <soapenv:Body>
+        <idow:SaveDataSet>
+            <idow:strSessionToken></idow:strSessionToken>
+            <idow:updateDataSet>
+                <xs:schema id="SLCustomers" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+                    <xs:element name="SLCustomers" msdata:IsDataSet="true" msdata:UseCurrentLocale="true">
+                        <xs:complexType>
+                            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                                <xs:element name="IDO">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="CustNum" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="CustSeq" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="Name" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="Addr_1" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="Country" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="State" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="City" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="County" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="Zip" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="CustType" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="CreditLimit" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="TermsCode" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="CreditHold" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="EndUserType" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="TerritoryCode" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="SalesTeamID" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="cusUf_GlobalId" type="xs:decimal" minOccurs="0"/>
+                                            <xs:element name="ShowInDropDownList" type="xs:decimal" minOccurs="0"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:choice>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:schema>
+                <diffgr:diffgram xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+                    <SLForecasts xmlns="">
+                    </SLForecasts>
+                </diffgr:diffgram>
+            </idow:updateDataSet>
+            <idow:refreshAfterSave>true</idow:refreshAfterSave>
+            <idow:strCustomInsert></idow:strCustomInsert>
+            <idow:strCustomUpdate></idow:strCustomUpdate>
+            <idow:strCustomDelete></idow:strCustomDelete>
+        </idow:SaveDataSet>
+    </soapenv:Body>
+</soapenv:Envelope>
