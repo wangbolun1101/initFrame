@@ -354,11 +354,13 @@
     <wsdl:service name="IDOWebService">
         <wsdl:port name="IDOWebServiceSoap" binding="tns:IDOWebServiceSoap">
            <!-- <soap:address location="http://60.216.102.4:7780/IDORequestService/IDOWebService.asmx"/>-->
-            <soap:address location="http://47.95.36.166/IDORequestService/IDOWebService.asmx"/>
+            <!--<soap:address location="http://47.95.36.166/IDORequestService/IDOWebService.asmx"/>-->
+            <soap:address location="http://123.56.137.215/IDORequestService/IDOWebService.asmx"/>
         </wsdl:port>
         <wsdl:port name="IDOWebServiceSoap12" binding="tns:IDOWebServiceSoap12">
             <!--<soap12:address location="http://60.216.102.4:7780/IDORequestService/IDOWebService.asmx"/>-->
-            <soap12:address location="http://47.95.36.166/IDORequestService/IDOWebService.asmx"/>
+            <!--<soap12:address location="http://47.95.36.166/IDORequestService/IDOWebService.asmx"/>-->
+            <soap12:address location="http://123.56.137.215/IDORequestService/IDOWebService.asmx"/>
         </wsdl:port>
     </wsdl:service>
 </wsdl:definitions>

@@ -26,13 +26,15 @@ public class WsAClient {
         IDOWebService ST = new IDOWebService();
         IDOWebServiceSoap idoWebServiceSoap = ST.getIDOWebServiceSoap();
         //调用接口,获取Sessiontoken
-        String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+        String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, "LIVE_HXSW");
         //输出token
         System.err.println(ERPtoken);
 
         //查询数据（参数：表名，需要查询的字段名，条件，排序，不填，查询数量-1代表查全部）
 //        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLItems", "Item, itmUf_Specification", "", "", "", -1);
-        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLLots", "Lot", " Lot = '1307040101-1000'", "", "", -1);
+//        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLLots", "Lot", " Lot = '1307040101-1000'", "", "", -1);
+
+        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "CustSeq,Name", "CustNum = 'JGD0841'", "CustSeq DESC", "", -1);
 
         //输出查询结果
         System.out.println(result);

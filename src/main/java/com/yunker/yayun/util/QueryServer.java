@@ -1,8 +1,20 @@
 package com.yunker.yayun.util;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.util.EntityUtils;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import sun.misc.BASE64Encoder;
@@ -133,7 +145,7 @@ public class QueryServer extends ReturnPublic {
 
         while (true) {
             Thread.sleep(800);
-            String addsql = sql + " limit " + count + "," + totalSize;
+            String addsql = sql + " order by id limit " + count + "," + totalSize;
             Map map = new HashMap();
             map.put("q", addsql);
             String url = "https://api.xiaoshouyi.com/data/v1/query";
@@ -229,7 +241,7 @@ public class QueryServer extends ReturnPublic {
      */
     public JSONObject getByXoqlSimple(String sql) throws Exception {
         Map map = new HashMap();
-        map.put("xoql", sql);
+        map.put("xoql", sql+" order by id");
         map.put("useSimpleCode","true");
         String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
         JSONObject object = JSONObject.parseObject(post);
@@ -295,7 +307,7 @@ public class QueryServer extends ReturnPublic {
      */
     public String getBySql(String sql) throws Exception {
         Map map=new HashMap();
-        map.put("q",sql+" order by Id");
+        map.put("q",sql+" order by id");
         String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/query", map);
         JSONObject object1 = JSONObject.parseObject(post);
         if (post.contains("error_code")){
@@ -361,20 +373,29 @@ public class QueryServer extends ReturnPublic {
 
     }
 
-    public Map<Boolean, String> getContract(String templateName, Long dataId){
+
+    public JSONObject getContractTemplete(String templateName){
+        try {
+            JSONObject template = getTemplateId(templateName);
+//            String fileName = template.getString("fileName");
+//            Long templateId = template.getLongValue("id");
+//            if (templateId==null||templateId==0){
+//                map.put(false,"未查询到对应模板——"+templateName);
+//                return map;
+//            }
+            return template;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public Map<Boolean, String> getContract( Long dataId,Long templateId){
         Map<Boolean,String>map=new HashMap<>();
         try {
-            Long templateId = getTemplateId(templateName);
-            if (templateId==null||templateId==0){
-                map.put(false,"未查询到对应模板——"+templateName);
-                return map;
-            }
             //获取打印合同
             String contactInfo = getContactInfo(dataId, templateId);
             JSONObject object = JSONObject.parseObject(contactInfo);
             String content=object.getString("data");
-            String newName = new String("合同".getBytes("utf-8"),"utf-8");
-            File file = base64ToFile(content, newName, ".pdf");
             map.put(true,content);
         } catch (Exception e) {
             e.printStackTrace();
@@ -394,6 +415,33 @@ public class QueryServer extends ReturnPublic {
         try {
 //            file = File.createTempFile(prefix, suffix);
             file = new File(prefix+suffix);
+            file.createNewFile();
+            System.out.println(file);
+            fout=new FileOutputStream(file);
+            fout.write(buff);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if(fout!=null) {
+                try {
+                    fout.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return file;
+    }
+    public static File base64ToFile(String base64,String fileName) {
+        if(base64==null||"".equals(base64)) {
+            return null;
+        }
+        byte[] buff= org.apache.tomcat.util.codec.binary.Base64.decodeBase64(base64);
+        File file=null;
+        FileOutputStream fout=null;
+        try {
+//            file = File.createTempFile(prefix, suffix);
+            file = new File(fileName);
             file.createNewFile();
             System.out.println(file);
             fout=new FileOutputStream(file);
@@ -464,20 +512,75 @@ public class QueryServer extends ReturnPublic {
         }
         return null;
     }
-    private Long getTemplateId(String templateName) throws Exception {
+    public String uploadFile(File file) throws Exception {
+
+        HttpClient httpclient = new DefaultHttpClient();
+
+        try {  //上传文件路径
+            HttpPost httppost = new HttpPost("https://api.xiaoshouyi.com/data/v1/objects/document/file/create");
+
+
+            FileBody bin = new FileBody(file);
+
+            MultipartEntity reqEntity = new MultipartEntity();  //建立多文件实体
+
+            reqEntity.addPart("file", bin);//upload为请求后台的File upload;属性
+
+            httppost.setEntity(reqEntity);  //设置实体
+            httppost.setHeader("Authorization",getToken());
+            httppost.setHeader("Charset", HTTP.UTF_8);
+            httppost.setHeader("Accept-Charset", HTTP.UTF_8);
+
+            HttpResponse response = httpclient.execute(httppost);
+
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            if(statusCode == HttpStatus.SC_OK){
+
+                HttpEntity resEntity = response.getEntity();
+                String s = EntityUtils.toString(resEntity);
+                System.out.println(s);//httpclient自带的工具类读取返回数据
+
+                EntityUtils.consume(resEntity);
+                return s;
+            }else {
+                return null;
+            }
+
+        } finally {
+            try {
+                httpclient.getConnectionManager().shutdown();
+            } catch (Exception ignore) {
+
+            }
+        }
+    }
+    public String createDoc(long dataId, long docId) throws Exception {
+        JSONObject record=new JSONObject();
+        JSONObject jsonObject=new JSONObject();
+        jsonObject.put("id", docId);
+        jsonObject.put("belongId", 1332135646396821L);
+        jsonObject.put("dataId", dataId);
+        jsonObject.put("directoryId", -1);
+        record.put("record", jsonObject);
+        String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/document/create", record.toJSONString());
+        return post;
+    }
+
+    private JSONObject getTemplateId(String templateName) throws Exception {
         System.out.println("templateName:"+templateName);
         String s = httpClientUtil.get(getToken(), "https://api.xiaoshouyi.com/rest/template/v2.0/" + URLEncoder.encode(templateName, "UTF-8"), null);
         System.out.println("查询合同模板："+s);
         JSONObject object = JSONObject.parseObject(s);
         if (!"200".equals(object.getString("code"))){
-            return 0L;
+            return null;
         }
         JSONArray batchData = object.getJSONArray("batchData");
         if (batchData.size()==0){
-            return 0L;
+            return null;
         }
-        Long longValue = batchData.getJSONObject(0).getJSONObject("data").getLongValue("id");
-        return longValue;
+        JSONObject data = batchData.getJSONObject(0).getJSONObject("data");
+        return data;
     }
     private String getContactInfo(long dataId, Long templateId) throws Exception {
         String s = httpClientUtil.get(getToken(), "https://api.xiaoshouyi.com/rest/template/v2.0/customEntity62__c/"+dataId+"/"+templateId, null);
@@ -524,9 +627,11 @@ public class QueryServer extends ReturnPublic {
         return imageString;
     }
     public static String getImageString(String fileData) throws IOException {
-        byte[] data = fileData.getBytes("UTF-8");
-        BASE64Encoder encoder = new BASE64Encoder();
-        return data != null ? encoder.encode(data) : "";
+        byte[] data = fileData.getBytes("ISO8859-1");
+        org.apache.tomcat.util.codec.binary.Base64 base64=new Base64();
+        byte[] encode = base64.encode(data);
+        String string = encode.toString();
+        return data != null ? string : "";
     }
     public String getDocInfo(Long docId) throws Exception {
         String s = httpClientUtil.getNosys(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/document/info?id=" + docId, null);
@@ -534,4 +639,5 @@ public class QueryServer extends ReturnPublic {
         String fileName = object.getString("fileName");
         return fileName;
     }
+
 }

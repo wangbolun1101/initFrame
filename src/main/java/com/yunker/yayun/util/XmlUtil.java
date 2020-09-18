@@ -261,7 +261,33 @@ public class XmlUtil {
 
         return jsonArray;
     }
-
+    public static JSONArray unPackageMAIN(String xmlString) throws Exception {
+        JSONArray jsonArray=new JSONArray();
+        Document document = DocumentHelper.parseText(xmlString);
+        Element root = document.getRootElement();
+        List<Element> elements = root.elements();
+        for (Element element : elements) {
+            List<Attribute> attributes = element.attributes();
+            if (attributes!=null&&attributes.size()>0){
+                String text = element.getText();
+                text="<param>"+text+"</param>";
+                Document document1 = DocumentHelper.parseText(text);
+                Element root1 = document1.getRootElement();
+                List<Element> dataElements = root1.elements();
+                for (Element dataElement : dataElements) {
+                    JSONObject object=new JSONObject();
+                    List<Attribute> attributes1 = dataElement.attributes();
+                    for (Attribute attribute : attributes1) {
+                        QName qName = attribute.getQName();
+                        String value = attribute.getValue();
+                        object.put(qName.getName(), value);
+                    }
+                    jsonArray.add(object);
+                }
+            }
+        }
+        return jsonArray;
+    }
 
     public static void main(String[] args) {
         try {

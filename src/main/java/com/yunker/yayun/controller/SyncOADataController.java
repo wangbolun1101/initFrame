@@ -1,15 +1,24 @@
 package com.yunker.yayun.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.yunker.yayun.config.FlowErrorCode;
+import com.yunker.yayun.entity.Address;
+import com.yunker.yayun.entity.Credit;
 import com.yunker.yayun.log.ModuleOutputLogger;
 import com.yunker.yayun.oaPackage.*;
 import com.yunker.yayun.util.*;
+import lombok.extern.slf4j.Slf4j;
 import mypackage.IDOWebService;
 import mypackage.IDOWebServiceSoap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.poi.util.IOUtils;
+import org.jeecgframework.poi.excel.ExcelImportUtil;
+import org.jeecgframework.poi.excel.entity.ImportParams;
+import org.jeecgframework.poi.excel.entity.result.ExcelImportResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +26,9 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.xml.rpc.ServiceException;
 import javax.xml.ws.Holder;
 import java.awt.geom.Area;
+import java.io.File;
+import java.io.FileInputStream;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -24,7 +36,7 @@ import java.util.*;
 /**
  * crm->oa同步数据
  */
-
+@Slf4j
 @Controller
 @RequestMapping("/syncOAData")
 @CrossOrigin(origins = "https://login.xiaoshouyi.com", maxAge = 3600)
@@ -36,10 +48,14 @@ public class SyncOADataController extends CommonController{
     private QueryServer queryServer;
     @Autowired
     private WorkFlowUtil workFlowUtil;
+    @Autowired
+    private BulkAPI bulkAPI;
 
     //实例化接口
 
     //实例化接口
+    private DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    private DateFormat df1 = new SimpleDateFormat("yyyyMMdd");
     private IDOWebService ST = new IDOWebService();
     private IDOWebServiceSoap idoWebServiceSoap = ST.getIDOWebServiceSoap();
     private String userId="crm";//用户名
@@ -61,6 +77,537 @@ public class SyncOADataController extends CommonController{
         }
         return token;
     }
+
+
+    /**
+     * 导入收票地址
+     * @return
+     */
+    @RequestMapping("/importReceiptAddress")
+    @ResponseBody
+    public String importReceiptAddress() throws Exception {
+        Map<String, Long> allUsers = queryServer.getAllUsers();
+        JSONArray paramArray=new JSONArray();
+        Map<String,JSONObject>ERPAccountMap=new HashMap<>();
+        Map<String,Long>addressMap=new HashMap<>();
+        Map<String,Integer>CountryMap=new HashMap<>();
+        Map<String,Integer>provinceMap=new HashMap<>();
+        String ERPAccountSql="select id,customItem4__c,customItem2__c,name,customItem10__c,customItem11__c from customEntity63__c";
+        JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPAccountSql);
+        JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPAccountSql);
+        for (int i = 0; i < allByXoqlSample3.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample3.getJSONObject(i);
+            String customItem2__c = jsonObject.getString("customItem2__c");
+            ERPAccountMap.put(customItem2__c, jsonObject);
+        }
+        String fieldsByBelongId = queryServer.getFieldsByBelongId(746444327076125L);
+        JSONObject object1 = JSONObject.parseObject(fieldsByBelongId);
+        JSONArray fields = object1.getJSONArray("fields");
+        for (int i = 0; i < fields.size(); i++) {
+            JSONObject jsonObject = fields.getJSONObject(i);
+            String propertyname = jsonObject.getString("propertyname");
+            if ("customItem5__c".equals(propertyname)) {
+                JSONArray selectitem = jsonObject.getJSONArray("selectitem");
+                for (int j = 0; j < selectitem.size(); j++) {
+                    JSONObject jsonObject1 = selectitem.getJSONObject(j);
+                    Integer value = jsonObject1.getInteger("value");
+                    String lable = jsonObject1.getString("label");
+                    String[] split = lable.split("_");
+                    CountryMap.put(split[0], value);
+                }
+            }
+        }
+        for (int i = 0; i < fields.size(); i++) {
+            JSONObject jsonObject = fields.getJSONObject(i);
+            String propertyname = jsonObject.getString("propertyname");
+            if ("customItem6__c".equals(propertyname)) {
+                JSONArray selectitem = jsonObject.getJSONArray("selectitem");
+                for (int j = 0; j < selectitem.size(); j++) {
+                    JSONObject jsonObject1 = selectitem.getJSONObject(j);
+                    Integer value = jsonObject1.getInteger("value");
+                    String lable = jsonObject1.getString("label");
+                    provinceMap.put(lable, value);
+                }
+            }
+        }
+        String addressSql="select id,customItem1__c,customItem11__c from customEntity9__c";
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(addressSql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, addressSql);
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            Long accountId = jsonObject.getLong("customItem1__c");
+            Long erpId = jsonObject.getLong("customItem11__c");
+            addressMap.put(accountId+","+erpId, id);
+        }
+
+//        provinceReverseJson
+        File file = new File("C:\\Users\\lucg\\Desktop\\华熙生物收票地址.xlsx");
+        FileInputStream input = new FileInputStream(file);
+        MultipartFile multipartFile = new MockMultipartFile("file", file.getName(), "text/plain", IOUtils.toByteArray(input));
+        JSONArray successJsonArray = importExcel(multipartFile, Address.class);
+        for (int i = 0; i < successJsonArray.size(); i++) {
+            JSONObject jsonObject = successJsonArray.getJSONObject(i);
+            String accountNo = jsonObject.getString("accountNo");
+            String erp_id = jsonObject.getString("erpid");
+            String address1 = jsonObject.getString("address1");
+            String address2 = jsonObject.getString("address2");
+            String province = jsonObject.getString("province");
+            String country = jsonObject.getString("country");
+            String contact = jsonObject.getString("contact");
+            String phone = jsonObject.getString("phone");
+            JSONObject ERPObject = ERPAccountMap.get(accountNo);
+            if (ERPObject==null){
+                continue;
+            }
+            Long accountId = ERPObject.getLong("customItem4__c");
+            Long erpId = ERPObject.getLong("id");
+            String accountName = ERPObject.getString("customItem10__c");
+            String ownerName = ERPObject.getString("customItem11__c");
+            String address=(StringUtils.isNotBlank(address1)&&StringUtils.isNotBlank(address2))?address1+";"+address2:(StringUtils.isNotBlank(address1)&&StringUtils.isBlank(address2))?address1:address2;
+            Integer countryInt = CountryMap.get(country);
+            String priovince_replacce = provinceReverseJson.getString(province);
+            Integer provinceInt = provinceMap.get(priovince_replacce);
+            Long aLong = addressMap.get(accountId + "," + erpId);
+            if (aLong==null||aLong==0){
+                Long ownerId = allUsers.get(ownerName);
+                JSONObject paramObject = new JSONObject();
+                paramObject.put("entityType", 746444327076143L);
+                if (accountId!=null&&accountId!=0){
+                    paramObject.put("customItem1__c", accountId);
+                }
+                if (erpId!=null&&erpId!=0){
+                    paramObject.put("customItem11__c", erpId);
+                }
+                if (countryInt!=null&&countryInt!=0){
+                    paramObject.put("customItem5__c", countryInt);
+                }
+                if (provinceInt!=null&&provinceInt!=0){
+                    paramObject.put("customItem6__c", provinceInt);
+                }
+                if (ownerId!=null&&ownerId!=0){
+                    paramObject.put("ownerId", ownerId);
+                }
+                paramObject.put("customItem2__c", contact);
+                paramObject.put("customItem3__c", phone);
+                paramObject.put("erp_id__c", erp_id);
+                paramObject.put("name", accountName);
+                paramObject.put("customItem4__c", address);
+                paramArray.add(paramObject);
+            }
+        }
+        bulkAPI.createDataTaskJob(paramArray, "customEntity9__c", "insert");
+
+        return null;
+    }
+
+    /**
+     * 导入价格表
+     * @return
+     */
+    @RequestMapping("/importPriceBook")
+    @ResponseBody
+    public String importPriceBook() throws Exception {
+        JSONArray jsonArray=new JSONArray();
+        JSONArray priceBookArray=new JSONArray();
+        JSONArray updatepriceBookEntryArray=new JSONArray();
+        JSONArray insertpriceBookEntryArray=new JSONArray();
+        jsonArray.add("LIVE_SDUSA");
+        jsonArray.add("LIVE_SDHY");
+        jsonArray.add("LIVE_HXSW");
+        Map<String,Integer>hbMap=new HashMap<>();
+        hbMap.put("CNY", 1);
+        hbMap.put("EUR", 2);
+        hbMap.put("HKD", 3);
+        hbMap.put("JPY", 4);
+        hbMap.put("USD", 5);
+        hbMap.put("GBP", 6);
+        Map<String,JSONArray>map = new HashMap<>();
+        for (int i = 0; i < jsonArray.size(); i++) {
+            String config = jsonArray.getString(i);
+            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+            String result = idoWebServiceSoap.loadJson(ERPtoken, "SLItemCustPrices", "CustNum,Item,Uf_StandNum,ContPrice,AdrCurrCode,EffectDate,RecordDate", "", "", "", 300000);
+            JSONObject resultJson = JSONObject.parseObject(result);
+            JSONArray propertyList = resultJson.getJSONArray("PropertyList");
+            JSONArray Items = resultJson.getJSONArray("Items");
+            JSONArray propertyArray=new JSONArray();
+            for (int j = 0; j < Items.size(); j++) {
+                JSONObject jsonObject1 = Items.getJSONObject(j);
+                JSONArray properties = jsonObject1.getJSONArray("Properties");
+                JSONObject propertieObject=new JSONObject();
+                for (int k = 0; k < properties.size(); k++) {
+                    JSONObject jsonObject2 = properties.getJSONObject(k);
+                    String property_0 = jsonObject2.getString("Property");
+                    String string = propertyList.getString(k);
+                    propertieObject.put(string, property_0);
+                }
+                propertyArray.add(propertieObject);
+            }
+            map.put(config, propertyArray);
+        }
+        Map<String,Long>priceBookMap=new HashMap<>();
+        Map<String,Long>productMap=new HashMap<>();
+        Map<String,Long>priceBookEntryMap=new HashMap<>();
+        Map<String,JSONObject>ERPAccountMap=new HashMap<>();
+        Map<Long,Long>SXDateMap=new HashMap<>();
+        String priceBookSql="select id,name,customItem1__c from priceBook";
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(priceBookSql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, priceBookSql);
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            Long accountId = jsonObject.getLong("customItem1__c");
+            String name = jsonObject.getString("name");
+            priceBookMap.put(name+","+accountId, id);
+        }
+        String productSql="select id,productName from product";
+        JSONObject byXoqlSimple1 = queryServer.getByXoqlSimple(productSql);
+        JSONArray allByXoqlSample1 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple1, productSql);
+        for (int i = 0; i < allByXoqlSample1.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample1.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String productName = jsonObject.getString("productName");
+            productMap.put(productName, id);
+        }
+        String priceBookEntrySql="select id,productId,priceBookId,name,customItem1__c from priceBookEntry";
+        JSONObject byXoqlSimple2 = queryServer.getByXoqlSimple(priceBookEntrySql);
+        JSONArray allByXoqlSample2 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple2, priceBookEntrySql);
+        for (int i = 0; i < allByXoqlSample2.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample2.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            Long productId = jsonObject.getLong("productId");
+            Long priceBookId = jsonObject.getLong("priceBookId");
+            String name = jsonObject.getString("name");
+            Long customItem1__c = jsonObject.getLong("customItem1__c");
+            priceBookEntryMap.put(name+","+productId+","+priceBookId, id);
+            SXDateMap.put(id, customItem1__c==null?0L:customItem1__c);
+        }
+        String ERPAccountSql="select id,customItem4__c,customItem2__c,name,customItem10__c from customEntity63__c";
+        JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPAccountSql);
+        JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPAccountSql);
+        for (int i = 0; i < allByXoqlSample3.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample3.getJSONObject(i);
+            String customItem2__c = jsonObject.getString("customItem2__c");
+            String name = jsonObject.getString("name");
+            ERPAccountMap.put(customItem2__c+","+name, jsonObject);
+        }
+        for (Map.Entry<String, JSONArray> stringJSONArrayEntry : map.entrySet()) {
+            String config = stringJSONArrayEntry.getKey();
+            JSONArray array = stringJSONArrayEntry.getValue();
+            for (int i = 0; i < array.size(); i++) {
+                JSONObject jsonObject = array.getJSONObject(i);
+                String custNum = jsonObject.getString("CustNum");
+                String item = jsonObject.getString("Item");
+                String uf_standNum = jsonObject.getString("Uf_StandNum");
+                String contPrice = jsonObject.getString("ContPrice");
+                String adrCurrCode = jsonObject.getString("AdrCurrCode");
+                String effectDate = jsonObject.getString("EffectDate");
+                String recordDate = jsonObject.getString("RecordDate");
+                Integer integer = hbMap.get(adrCurrCode);
+                String productName = item + "-" + uf_standNum;
+                JSONObject object = ERPAccountMap.get(custNum+","+config);
+                if (object==null){
+                    continue;
+                }
+                Long accountId = object.getLong("customItem4__c");
+                Long ERPId = object.getLong("id");
+                String accountName = object.getString("customItem10__c");
+                Long productId = productMap.get(productName);
+                Long priceBookId = priceBookMap.get(config+","+accountId);
+                Long priceBookEntryId = priceBookEntryMap.get(productName + "," + productId+","+priceBookId);
+                if (productId==null||productId==0){
+                    continue;
+                }
+                if (accountId==null||accountId==0){
+                    continue;
+                }
+                if (priceBookId==null||priceBookId==0){
+//                    JSONObject priceBookObject = new JSONObject();
+//                    priceBookObject.put("entityType", 101065558);
+//                    priceBookObject.put("name", config);
+//                    priceBookObject.put("customItem1__c", accountId);
+//                    priceBookObject.put("ownerId", 743527959707865L);
+//                    priceBookObject.put("dimDepart", 724765962912012L);
+//                    priceBookObject.put("enableFlg", 1);
+//                    if (ERPId!=null&&ERPId!=0){
+//                        priceBookObject.put("customItem3__c", ERPId);
+//                    }
+//                    priceBookMap.put(config+","+accountId, 8888888L);
+//                    priceBookArray.add(priceBookObject);
+                    continue;
+                }
+                if (priceBookEntryId!=null&&priceBookEntryId!=0){
+                    if (priceBookEntryId.longValue()==88888L){
+                        continue;
+                    }
+                    Long aLong = SXDateMap.get(priceBookEntryId);
+                    if (StringUtils.isNotBlank(effectDate)) {
+                        effectDate=effectDate.split(" ")[0];
+                        long time = df1.parse(effectDate).getTime();
+                        if (time>aLong){
+                            //todo 更新
+                            JSONObject priceBookEntryObject=new JSONObject();
+                            priceBookEntryObject.put("id", priceBookEntryId);
+                            if (integer!=null&&integer!=0){
+                                priceBookEntryObject.put("customItem3__c", integer);
+                            }
+                            priceBookEntryObject.put("bookPrice", StringUtils.isBlank(contPrice)?0:Double.valueOf(contPrice));
+                            priceBookEntryObject.put("productPrice", StringUtils.isBlank(contPrice)?0:Double.valueOf(contPrice));
+                            priceBookEntryObject.put("customItem1__c", time);
+                            priceBookEntryObject.put("remark", accountName);
+                            updatepriceBookEntryArray.add(priceBookEntryObject);
+                        }
+                    }
+                }else {
+                    //todo 创建
+                    JSONObject priceBookEntryObject=new JSONObject();
+                   // {"data":{"name":o,"priceBookId":newId,"productId":pIdR,"customItem3__c":i,"productPrice":ContPrice,"customItem1__c":EffectDate,"bookPrice":ContPrice,"enableFlg":"1","syncFlg":"1","remark":accountName}}
+                    priceBookEntryObject.put("entityType", 101065557);
+                    priceBookEntryObject.put("name", productName);
+                    priceBookEntryObject.put("priceBookId", priceBookId);
+                    priceBookEntryObject.put("productId", productId);
+                    priceBookEntryObject.put("productPrice", StringUtils.isBlank(contPrice)?0:Double.valueOf(contPrice));
+                    priceBookEntryObject.put("bookPrice", StringUtils.isBlank(contPrice)?0:Double.valueOf(contPrice));
+                    priceBookEntryObject.put("enableFlg", 1);
+                    priceBookEntryObject.put("syncFlg", 1);
+                    priceBookEntryObject.put("remark", accountName);
+                    priceBookEntryObject.put("customItem3__c", integer);
+                    if (StringUtils.isNotBlank(effectDate)) {
+                        long time = df1.parse(effectDate).getTime();
+                        priceBookEntryObject.put("customItem1__c", time);
+                    }
+                    priceBookEntryMap.put(productName + "," + productId+","+priceBookId,88888L);
+                    insertpriceBookEntryArray.add(priceBookEntryObject);
+                }
+            }
+        }
+//        if (priceBookArray.size()>0){
+//            bulkAPI.createDataTaskJob(priceBookArray, "priceBook", "insert");
+//        }
+        if (updatepriceBookEntryArray.size()>0){
+            bulkAPI.createDataTaskJob(updatepriceBookEntryArray, "priceBookEntry", "update");
+        }
+//        if (insertpriceBookEntryArray.size()>0){
+//            bulkAPI.createDataTaskJob(insertpriceBookEntryArray, "priceBookEntry", "insert");
+//        }
+        return null;
+    }
+
+    /**
+     * 将有客户编码的客户创建到ERP客户账套模块
+     * @return
+     */
+    @RequestMapping("/importCredit")
+    @ResponseBody
+    public String importCredit() throws Exception {
+        JSONArray jsonArray=new JSONArray();
+        JSONArray updateJsonArray=new JSONArray();
+        Map<String,Long>accountMap = new HashMap<>();
+        Map<String,Long>accountNoMap = new HashMap<>();
+        Map<String,Long>creditMap = new HashMap<>();
+        Map<String,Long>departmentMap = new HashMap<>();
+        Map<String,Long>ZQMap = new HashMap<>();
+        Map<String,Long>ERPMap = new HashMap<>();
+        Map<String,Integer>levelMap = new HashMap<>();
+        levelMap.put("A", 1);
+        levelMap.put("B", 2);
+        levelMap.put("C", 3);
+        levelMap.put("D", 4);
+
+        String sql="select id,accountName,customItem201__c from account";
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(sql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, sql);
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String accountName = jsonObject.getString("accountName");
+            String customItem201__c = jsonObject.getString("customItem201__c");
+            accountMap.put(accountName, id);
+            accountNoMap.put(customItem201__c, id);
+        }
+
+        String creditSql="select id,name from customEntity21__c";
+        JSONObject byXoqlSimple1 = queryServer.getByXoqlSimple(creditSql);
+        JSONArray allByXoqlSample1 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple1, creditSql);
+        for (int i = 0; i < allByXoqlSample1.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample1.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String name = jsonObject.getString("name");
+            creditMap.put(name, id);
+        }
+
+        String departSql="select id,customItem126__c from department";
+        String bySql = queryServer.getBySql(departSql);
+        JSONArray all = queryServer.findAll(getToken(), bySql, departSql);
+        for (int i = 0; i < all.size(); i++) {
+            JSONObject jsonObject = all.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String customItem126__c = jsonObject.getString("customItem126__c");
+            departmentMap.put(customItem126__c, id);
+        }
+        String zqSql="select id,name from customEntity33__c";
+        JSONObject byXoqlSimple2 = queryServer.getByXoqlSimple(zqSql);
+        JSONArray allByXoqlSample2 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple2, zqSql);
+        for (int i = 0; i < allByXoqlSample2.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample2.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String name = jsonObject.getString("name");
+            ZQMap.put(name, id);
+        }
+        String ERPSql="select id,customItem4__c,name from customEntity63__c";
+        JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPSql);
+        JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPSql);
+        for (int i = 0; i < allByXoqlSample3.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample3.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            Long accountId = jsonObject.getLong("customItem4__c");
+            String name = jsonObject.getString("name");
+            ERPMap.put(accountId+","+name, id);
+        }
+        File file = new File("C:\\Users\\lucg\\Desktop\\HXSW&SDHY&SDUSA事业部信用(1).xlsx");
+        FileInputStream input = new FileInputStream(file);
+        MultipartFile multipartFile = new MockMultipartFile("file", file.getName(), "text/plain", IOUtils.toByteArray(input));
+        JSONArray successJsonArray = importExcel(multipartFile, Credit.class);
+        for (int i = 0; i < successJsonArray.size(); i++) {
+            JSONObject jsonObject = successJsonArray.getJSONObject(i);
+            String zt = jsonObject.getString("zt");
+            if ("SDFRD".equals(zt)){
+                zt="SDHY";
+            }
+            zt="LIVE_"+zt;
+            String accountNo = jsonObject.getString("accountNo");
+            String accountName = jsonObject.getString("accountName");
+            String syb = jsonObject.getString("syb");
+            String sybName = jsonObject.getString("sybName");
+            String zqtk = jsonObject.getString("zqtk");
+            String tkDescribe = jsonObject.getString("tkDescribe");
+            String accountLevel = jsonObject.getString("accountLevel");
+            String creditLimit = jsonObject.getString("creditLimit");
+            Long accountId = accountMap.get(accountName);
+            if (accountId==null||accountId==0){
+                accountId=accountNoMap.get(accountNo);
+            }
+            Long erpId = ERPMap.get(accountId + "," + zt);
+            Long sybId = departmentMap.get(syb);
+            Long zqId = ZQMap.get(zqtk);
+            Integer level = levelMap.get(accountLevel);
+            Long creditId = creditMap.get(zt + syb + accountName);
+            if (creditId==null||creditId==0){
+                JSONObject object=new JSONObject();
+                object.put("entityType", 1214917399855445L);
+                object.put("name", zt + syb + accountName);
+                object.put("customItem3__c", StringUtils.isBlank(creditLimit)?0:Double.valueOf(creditLimit));
+                if (sybId!=null&&sybId!=0){
+                    object.put("customItem6__c", sybId);
+                }
+                if (zqId!=null&&zqId!=0){
+                    object.put("customItem8__c", zqId);
+                }
+                if (accountId!=null&&accountId!=0){
+                    object.put("customItem9__c", accountId);
+                }
+                if (erpId!=null&&erpId!=0){
+                    object.put("customItem13__c", erpId);
+                }
+                if (level!=null&&level!=0){
+                    object.put("customItem10__c", level);
+                }
+                jsonArray.add(object);
+            }else {
+                JSONObject object=new JSONObject();
+                object.put("id", creditId);
+                object.put("customItem3__c", StringUtils.isBlank(creditLimit)?0:Double.valueOf(creditLimit));
+                if (sybId!=null&&sybId!=0){
+                    object.put("customItem6__c", sybId);
+                }
+                if (zqId!=null&&zqId!=0){
+                    object.put("customItem8__c", zqId);
+                }
+                if (accountId!=null&&accountId!=0){
+                    object.put("customItem9__c", accountId);
+                }
+                if (erpId!=null&&erpId!=0){
+                    object.put("customItem13__c", erpId);
+                }
+                if (level!=null&&level!=0){
+                    object.put("customItem10__c", level);
+                }
+                updateJsonArray.add(object);
+            }
+
+
+        }
+        if (jsonArray.size()>0){
+            bulkAPI.createDataTaskJob(jsonArray, "customEntity21__c", "insert");
+        }
+        if (updateJsonArray.size()>0){
+            bulkAPI.createDataTaskJob(updateJsonArray, "customEntity21__c", "update");
+        }
+        return null;
+    }
+    /**
+     * 解析Excel
+     *
+     * @param file
+     * @return
+     */
+    public <T> JSONArray importExcel(MultipartFile file, Class<?> pojoClass) {
+        ImportParams importParams = new ImportParams();
+        importParams.setHeadRows(1);
+        importParams.setNeedVerfiy(true);
+        String filename = file.getOriginalFilename();
+        try {
+            ExcelImportResult<T> result = ExcelImportUtil.importExcelVerify(file.getInputStream(), pojoClass, importParams);
+            //成功导入
+            List<T> list = result.getList();
+            JSONArray jsonArray = JSONArray.parseArray(JSON.toJSONString(list));
+            return jsonArray;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    /**
+     * 将有客户编码的客户创建到ERP客户账套模块
+     * @return
+     */
+    @RequestMapping("/addAccountToERP")
+    @ResponseBody
+    public String addAccountToERP() throws Exception {
+        JSONArray jsonArray=new JSONArray();
+        Map<String,String>map = new HashMap<>();
+        String sql="select id,customItem201__c from account where customItem201__c is not null";
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(sql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, sql);
+        String ERPSql="select customItem4__c,customItem2__c from customEntity63__c";
+        JSONObject byXoqlSimple1 = queryServer.getByXoqlSimple(ERPSql);
+        JSONArray allByXoqlSample1 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple1, ERPSql);
+        for (int i = 0; i < allByXoqlSample1.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample1.getJSONObject(i);
+            Long accountID = jsonObject.getLong("customItem4__c");
+            String customItem2__c = jsonObject.getString("customItem2__c");
+            map.put(accountID+","+customItem2__c, "success");
+        }
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String customItem201__c = jsonObject.getString("customItem201__c");
+            String s = map.get(id + "," + customItem201__c);
+            if (StringUtils.isBlank(s)){
+                JSONObject object=new JSONObject();
+                object.put("entityType", 1340810097181017L);
+                object.put("customItem5__c", "同步完成");
+                object.put("customItem4__c", id);
+                object.put("name", "LIVE_HXSW");
+                object.put("customItem2__c", customItem201__c);
+                object.put("customItem3__c", 6);
+                jsonArray.add(object);
+            }
+        }
+        bulkAPI.createDataTaskJob(jsonArray, "customEntity63__c", "insert");
+        return null;
+    }
+
 
     @RequestMapping("/readXML")
     @ResponseBody
@@ -84,16 +631,23 @@ public class SyncOADataController extends CommonController{
             return sendJson("解析异常："+e.getMessage(), false);
         }
     }
-    @RequestMapping("/test1")
-    @ResponseBody
-    public String test1(){
-        try {
-            queryServer.getContract("原料销售合同（外销）", 1333844347208080L);
-            return "";
-        } catch (Exception e) {
-            return sendJson("解析异常："+e.getMessage(), false);
-        }
-    }
+//    @RequestMapping("/test1")
+//    @ResponseBody
+//    public String test1(){
+//        try {
+//            JSONObject contractTemplete = queryServer.getContractTemplete("原料销售合同（外销）");
+//            String fileName = contractTemplete.getString("fileName");
+//            Long templateId = contractTemplete.getLongValue("id");
+////            if (templateId==null||templateId==0){
+////                map.put(false,"未查询到对应模板——"+templateName);
+////                return map;
+////            }
+//            queryServer.getContract(, 1333844347208080L);
+//            return "";
+//        } catch (Exception e) {
+//            return sendJson("解析异常："+e.getMessage(), false);
+//        }
+//    }
     @PostMapping("/readCSV")
     @ResponseBody
     public String readCSV(MultipartFile file){
@@ -150,7 +704,7 @@ public class SyncOADataController extends CommonController{
         return customNum;
     }
 
-    @RequestMapping("/getAllSelects")
+    @RequestMapping(value = "/getAllSelects",produces = {"application/json;charset=UTF-8"})
     @ResponseBody
     public String getAllSelects(){
         try {
@@ -190,7 +744,7 @@ public class SyncOADataController extends CommonController{
      * @param jsonObject
      * @return
      */
-    @RequestMapping("/getOtherInfo")
+    @RequestMapping(value = "/getOtherInfo",produces = {"application/json;charset=UTF-8"})
     @ResponseBody
     public String getOtherInfo(@RequestBody JSONObject jsonObject){
         String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
@@ -256,60 +810,105 @@ public class SyncOADataController extends CommonController{
      * @param jsonObject
      * @return
      */
-    @RequestMapping("/getMainData")
+    @RequestMapping(value = "/getMainData",produces = {"application/json;charset=UTF-8"})
     @ResponseBody
     public String getMainData(@RequestBody JSONObject jsonObject){
-        String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
-        String BItem = jsonObject.getString("BItem");
-        String EItem = jsonObject.getString("EItem");
-        String BLot = jsonObject.getString("BLot");
-        String ELot = jsonObject.getString("ELot");
-        Double BFeature18 = jsonObject.getDouble("BFeature18");
-        Double EFeature18 = jsonObject.getDouble("EFeature18");
-        Double BFeature16 = jsonObject.getDouble("BFeature16");
-        Double EFeature16 = jsonObject.getDouble("EFeature16");
-        Double BFeature53 = jsonObject.getDouble("BFeature53");
-        Double EFeature53 = jsonObject.getDouble("EFeature53");
-        Double BFeature19 = jsonObject.getDouble("BFeature19");
-        Double EFeature19 = jsonObject.getDouble("EFeature19");
-        Double BFeature43 = jsonObject.getDouble("BFeature43");
-        Double EFeature43 = jsonObject.getDouble("EFeature43");
-        Double BFeature5 = jsonObject.getDouble("BFeature5");
-        Double EFeature5 = jsonObject.getDouble("EFeature5");
-        String Site = jsonObject.getString("Site");
-        String CustomerStandard = jsonObject.getString("CustomerStandard");
-        String EnterpriseStandard = jsonObject.getString("EnterpriseStandard");
-        Double BQtyOnHand = jsonObject.getDouble("BQtyOnHand");
-        Double EQtyOnHand = jsonObject.getDouble("EQtyOnHand");
-        String lot = jsonObject.getString("lot");
-//        String whse = jsonObject.getString("whse");
-        Holder<String> pa = new Holder<>("<Parameters><Parameter>" + BItem + "</Parameter>" +
-                "<Parameter>"+EItem+"</Parameter>" +
-                "<Parameter>"+BLot+"</Parameter>" +
-                "<Parameter>"+ELot+"</Parameter>" +
-                "<Parameter>"+BFeature18+"</Parameter>" +
-                "<Parameter>"+EFeature18+"</Parameter>" +
-                "<Parameter>"+BFeature16+"</Parameter>" +
-                "<Parameter>"+EFeature16+"</Parameter>" +
-                "<Parameter>"+BFeature53+"</Parameter>" +
-                "<Parameter>"+EFeature53+"</Parameter>" +
-                "<Parameter>"+BFeature19+"</Parameter>" +
-                "<Parameter>"+EFeature19+"</Parameter>" +
-                "<Parameter>"+BFeature43+"</Parameter>" +
-                "<Parameter>"+EFeature43+"</Parameter>" +
-                "<Parameter>"+BFeature5+"</Parameter>" +
-                "<Parameter>"+EFeature5+"</Parameter>" +
-                "<Parameter>"+Site+"</Parameter>" +
-                "<Parameter>"+CustomerStandard+"</Parameter>" +
-                "<Parameter>"+EnterpriseStandard+"</Parameter>" +
-                "<Parameter>"+BQtyOnHand+"</Parameter>" +
-                "<Parameter>"+EQtyOnHand+"</Parameter>" +
-                "<Parameter>"+lot+"</Parameter>" +
-//                "<Parameter>"+whse+"</Parameter>" +
-                "<Parameter ByRef=\"Y\"></Parameter></Parameters>");
-        String customNum = getCustomNum(ERPtoken, pa,"HXItemLotFeatureSearchSp");
-        System.out.println(customNum);
-        return customNum;
+        String customNum = null;
+        try {
+            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+            String BItem = jsonObject.getString("BItem");
+            String EItem = jsonObject.getString("EItem");
+            String BLot = jsonObject.getString("BLot");
+            String ELot = jsonObject.getString("ELot");
+            BigDecimal BFeature18 = jsonObject.getBigDecimal("BFeature18");
+            BigDecimal EFeature18 = jsonObject.getBigDecimal("EFeature18");
+            BigDecimal BFeature16 = jsonObject.getBigDecimal("BFeature16");
+            BigDecimal EFeature16 = jsonObject.getBigDecimal("EFeature16");
+            BigDecimal BFeature53 = jsonObject.getBigDecimal("BFeature53");
+            BigDecimal EFeature53 = jsonObject.getBigDecimal("EFeature53");
+            BigDecimal BFeature19 = jsonObject.getBigDecimal("BFeature19");
+            BigDecimal EFeature19 = jsonObject.getBigDecimal("EFeature19");
+            BigDecimal BFeature43 = jsonObject.getBigDecimal("BFeature43");
+            BigDecimal EFeature43 = jsonObject.getBigDecimal("EFeature43");
+            BigDecimal BFeature5 = jsonObject.getBigDecimal("BFeature5");
+            BigDecimal EFeature5 = jsonObject.getBigDecimal("EFeature5");
+            BigDecimal BQtyOnHand = jsonObject.getBigDecimal("BQtyOnHand");
+            BigDecimal EQtyOnHand = jsonObject.getBigDecimal("EQtyOnHand");
+            String Site = jsonObject.getString("Site");
+            String CustomerStandard = jsonObject.getString("CustomerStandard");
+            String EnterpriseStandard = jsonObject.getString("EnterpriseStandard");
+            String lot = jsonObject.getString("lot");
+            String whse = jsonObject.getString("whse");
+
+//        BFeature18 = BFeature18==null?new BigDecimal("0"):BFeature18;
+//        EFeature18 = EFeature18==null?new BigDecimal("0"):EFeature18;
+//        BFeature16 = BFeature16==null?new BigDecimal("0"):BFeature16;
+//        EFeature16 = EFeature16==null?new BigDecimal("0"):EFeature16;
+//        BFeature53 = BFeature53==null?new BigDecimal("0"):BFeature53;
+//        EFeature53 = EFeature53==null?new BigDecimal("0"):EFeature53;
+//        BFeature19 = BFeature19==null?new BigDecimal("0"):BFeature19;
+//        EFeature19 = EFeature19==null?new BigDecimal("0"):EFeature19;
+//        BFeature43 = BFeature43==null?new BigDecimal("0"):BFeature43;
+//        EFeature43 = EFeature43==null?new BigDecimal("0"):EFeature43;
+//        BFeature5 = BFeature5 ==null?new BigDecimal("0"):BFeature5;
+//        EFeature5 = EFeature5 ==null?new BigDecimal("0"):EFeature5;
+//        BFeature5 = BQtyOnHand ==null?new BigDecimal("0"):BQtyOnHand;
+//        EFeature5 = EQtyOnHand ==null?new BigDecimal("0"):EQtyOnHand;
+            String str_BFeature18 = BFeature18==null?"":BFeature18+"";
+            String str_EFeature18 = EFeature18==null?"":EFeature18+"";
+            String str_BFeature16 = BFeature16==null?"":BFeature16+"";
+            String str_EFeature16 = EFeature16==null?"":EFeature16+"";
+            String str_BFeature53 = BFeature53==null?"":BFeature53+"";
+            String str_EFeature53 = EFeature53==null?"":EFeature53+"";
+            String str_BFeature19 = BFeature19==null?"":BFeature19+"";
+            String str_EFeature19 = EFeature19==null?"":EFeature19+"";
+            String str_BFeature43 = BFeature43==null?"":BFeature43+"";
+            String str_EFeature43 = EFeature43==null?"":EFeature43+"";
+            String str_BFeature5 = BFeature5 == null?"":BFeature5+"";
+            String str_EFeature5 = EFeature5 == null?"":EFeature5+"";
+            String str_BQtyOnHand = BQtyOnHand==null?"":BQtyOnHand+"";
+            String str_EQtyOnHand = EQtyOnHand==null?"":EQtyOnHand+"";
+            BItem = StringUtils.isBlank(BItem)?"":BItem;
+            EItem = StringUtils.isBlank(EItem)?"":EItem;
+            BLot  = StringUtils.isBlank(BLot)?"":BLot;
+            ELot  = StringUtils.isBlank(ELot)?"":ELot;
+            Site=StringUtils.isBlank(Site)?"":Site;
+            CustomerStandard=StringUtils.isBlank(CustomerStandard)?"":CustomerStandard;
+            EnterpriseStandard=StringUtils.isBlank(EnterpriseStandard)?"":EnterpriseStandard;
+            lot=StringUtils.isBlank(lot)?"":lot;
+            whse=StringUtils.isBlank(whse) ?"":whse;
+
+            Holder<String> pa = new Holder<>("<Parameters><Parameter>" + BItem + "</Parameter>" +
+                    "<Parameter>"+EItem+"</Parameter>" +
+                    "<Parameter>"+BLot+"</Parameter>" +
+                    "<Parameter>"+ELot+"</Parameter>" +
+                    "<Parameter>"+str_BFeature18+"</Parameter>" +
+                    "<Parameter>"+str_EFeature18+"</Parameter>" +
+                    "<Parameter>"+str_BFeature16+"</Parameter>" +
+                    "<Parameter>"+str_EFeature16+"</Parameter>" +
+                    "<Parameter>"+str_BFeature53+"</Parameter>" +
+                    "<Parameter>"+str_EFeature53+"</Parameter>" +
+                    "<Parameter>"+str_BFeature19+"</Parameter>" +
+                    "<Parameter>"+str_EFeature19+"</Parameter>" +
+                    "<Parameter>"+str_BFeature43+"</Parameter>" +
+                    "<Parameter>"+str_EFeature43+"</Parameter>" +
+                    "<Parameter>"+str_BFeature5+"</Parameter>" +
+                    "<Parameter>"+str_EFeature5+"</Parameter>" +
+                    "<Parameter>"+Site+"</Parameter>" +
+                    "<Parameter>"+CustomerStandard+"</Parameter>" +
+                    "<Parameter>"+EnterpriseStandard+"</Parameter>" +
+                    "<Parameter>"+str_BQtyOnHand+"</Parameter>" +
+                    "<Parameter>"+str_EQtyOnHand+"</Parameter>" +
+                    "<Parameter>"+lot+"</Parameter>" +
+                    "<Parameter>"+whse+"</Parameter>" +
+                    "<Parameter ByRef=\"Y\"></Parameter></Parameters>");
+            customNum = getCustomNum(ERPtoken, pa,"HXItemLotFeatureSearchSp_CRM");
+            JSONArray jsonArray = XmlUtil.unPackageMAIN(customNum);
+            return sendJson(jsonArray, true);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return sendJson("查询异常", false, e.getMessage());
+        }
     }
     @RequestMapping("/test2")
     @ResponseBody
@@ -401,7 +1000,62 @@ public class SyncOADataController extends CommonController{
         }
         return responseJSON;
     }
-
+    /**
+     * 创建合同到相关
+     * @param param
+     * @return
+     */
+    @RequestMapping("/createDoc")
+    @ResponseBody
+    public String createDoc(@RequestBody JSONObject param){
+        try {
+            Long dataId = param.getLong("dataId");
+            String language = param.getString("language");
+            String templateName="";
+            Integer mblx = param.getInteger("mblx");
+            if (mblx.intValue()==0) {
+                if ("CHN".equals(language)) {//中文合同
+                    templateName = "原料销售合同（内销）";
+                } else {//英文合同
+                    templateName = "原料销售合同（外销）";
+                }
+                JSONObject contractTemplete = queryServer.getContractTemplete(templateName);
+                if (contractTemplete==null){
+                    return sendJson("未查询到对应模板——"+templateName, false);
+                }
+                String fileName = contractTemplete.getString("fileName");
+                Long templateId = contractTemplete.getLongValue("id");
+                if (templateId==null||templateId==0){
+                    return sendJson("未查询到对应模板——"+templateName, false);
+                }
+                Map<Boolean, String> contract = queryServer.getContract(dataId,templateId);
+                Boolean key = contract.entrySet().iterator().next().getKey();
+                String value = contract.entrySet().iterator().next().getValue();
+                if (key) {
+                    int i = fileName.lastIndexOf(".");
+                    String substring = fileName.substring(i + 1, fileName.length());
+                    File file = queryServer.base64ToFile(value, "contract_"+df1.format(new Date())+"."+substring);
+                    String s = queryServer.uploadFile(file);
+                    if (org.apache.commons.lang3.StringUtils.isBlank(s)) {
+                        System.err.println("创建合同失败：" + s);
+                    }
+                    JSONObject object1 = JSONObject.parseObject(s);
+                    long docId = object1.getLongValue("id");
+                    //创建文档到合同下
+                    String doc = queryServer.createDoc(dataId, docId);
+                    JSONObject object2 = JSONObject.parseObject(doc);
+                    if (!object2.containsKey("id")) {
+                        System.err.println("上传合同失败，id为空：" + object2);
+                    }
+                } else {
+                    log.error(value);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sendJson("上传完成", true);
+    }
 
     /**
      * 审批 CRM->OA
@@ -411,6 +1065,7 @@ public class SyncOADataController extends CommonController{
     @RequestMapping("/sync")
     @ResponseBody
     public String syncFreeSample(@RequestBody JSONObject param){
+        System.out.println("同步OA开始。。。");
         Long dataId = param.getLong("dataId");
         String isContract = param.getString("isContract");//合同打印
         try {
@@ -439,6 +1094,7 @@ public class SyncOADataController extends CommonController{
 //            }else {
             queryServer.updateCustomizeById(updateObject);
 //            }
+            System.out.println("同步OA结束。。。");
             return sendJson("同步成功", true);
         }catch (Exception e){
             e.printStackTrace();
@@ -454,6 +1110,7 @@ public class SyncOADataController extends CommonController{
             } catch (Exception e1) {
                 e1.printStackTrace();
             }
+            System.out.println("同步OA结束。。。");
             return sendJson("同步失败："+e.getMessage(), false);
         }
     }

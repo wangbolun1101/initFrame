@@ -355,6 +355,44 @@ public class CommonController {
             "  \"浙江省\":\"CN_ZJ\",\n" +
             "  \"非中国\":\"GLOBA\"\n" +
             "}");
+    public static JSONObject provinceReverseJson=JSONObject.parseObject("{\n" +
+            "  \"CN_AH\":\"安徽省\",\n" +
+            "  \"CN_BJ\":\"北京市\",\n" +
+            "  \"CN_CQ\":\"重庆市\",\n" +
+            "  \"CN_FJ\":\"福建省\",\n" +
+            "  \"CN_GD\":\"广东省\",\n" +
+            "  \"CN_GS\":\"甘肃省\",\n" +
+            "  \"CN_GX\":\"广西壮族自治区\",\n" +
+            "  \"CN_GZ\":\"贵州省\",\n" +
+            "  \"CN_HA\":\"河南省\",\n" +
+            "  \"CN_HB\":\"湖北省\",\n" +
+            "  \"CN_HE\":\"河北省\",\n" +
+            "  \"CN_HI\":\"海南省\",\n" +
+            "  \"CN_HK\":\"香港特别行政区\",\n" +
+            "  \"CN_MO\":\"澳门特别行政区\",\n" +
+            "  \"CN_HL\":\"黑龙江省\",\n" +
+            "  \"CN_HN\":\"湖南省\",\n" +
+            "  \"CN_JL\":\"吉林省\",\n" +
+            "  \"CN_JS\":\"江苏省\",\n" +
+            "  \"CN_JX\":\"江西省\",\n" +
+            "  \"CN_LN\":\"辽宁省\",\n" +
+            "  \"CN_NM\":\"内蒙古自治区\",\n" +
+            "  \"CN_NX\":\"宁夏回族自治区\",\n" +
+            "  \"CN_QH\":\"青海省\",\n" +
+            "  \"CN_SC\":\"四川省\",\n" +
+            "  \"CN_SD\":\"山东省\",\n" +
+            "  \"CN_SH\":\"上海市\",\n" +
+            "  \"CN_SN\":\"陕西省\",\n" +
+            "  \"CN_SX\":\"山西省\",\n" +
+            "  \"CN_TJ\":\"天津市\",\n" +
+            "  \"CN_TW\":\"台湾省\",\n" +
+            "  \"CN_TW\":\"中国台湾\",\n" +
+            "  \"CN_XJ\":\"新疆维吾尔自治区\",\n" +
+            "  \"CN_XZ\":\"西藏自治区\",\n" +
+            "  \"CN_YN\":\"云南省\",\n" +
+            "  \"CN_ZJ\":\"浙江省\",\n" +
+            "  \"GLOBA\":\"非中国\"\n" +
+            "}");
     public static JSONObject countryHeadJson=JSONObject.parseObject("{\n" +
             "  \"CN_AH\":\"AH\",\n" +
             "  \"CN_BJ\":\"BJ\",\n" +

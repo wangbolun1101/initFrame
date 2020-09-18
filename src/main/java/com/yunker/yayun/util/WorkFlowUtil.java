@@ -11,6 +11,7 @@ import org.dom4j.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -47,19 +48,30 @@ public class WorkFlowUtil {
             JSONObject mainData = param.getJSONObject("mainData");
             Long belongId = param.getLong("belongId");
             if ("1".equals(isContract)){//合同审批
-                String templateName="";
-                if ("CHN".equals(language)){//中文合同
-                    templateName="原料销售合同（内销）";
-                }else {//英文合同
-                    templateName=" 原料销售合同（外销）";
-                }
-                Map<Boolean, String> contract = queryServer.getContract(templateName, dataId);
-                Boolean key = contract.entrySet().iterator().next().getKey();
-                String value = contract.entrySet().iterator().next().getValue();
-                if (key){
-                    mainData.put("xgfj", "base64:"+value);
-                }else {
-                    log.error(value);
+//                Integer mblx = mainData.getInteger("mblx");
+//                if (mblx.intValue()==0){
+//                    String templateName="";
+//                    if ("CHN".equals(language)){//中文合同
+//                        templateName="原料销售合同（内销）";
+//                    }else {//英文合同
+//                        templateName=" 原料销售合同（外销）";
+//                    }
+//                    Map<Boolean, String> contract = queryServer.getContract(templateName, dataId);
+//                    Boolean key = contract.entrySet().iterator().next().getKey();
+//                    String value = contract.entrySet().iterator().next().getValue();
+//                    if (key){
+//                        mainData.put("xgfj", "base64:"+value);
+//                    }else {
+//                        log.error(value);
+//                    }
+//                }else {
+                    Long xhfj = mainData.getLong("xgfj");
+                    if (xhfj != null && xhfj != 0){
+                        String s = queryServer.downLoadDoc(xhfj);
+                        fielName = queryServer.getDocInfo(xhfj);
+                        mainData.put("xgfj", "base64:"+s);
+                        File file = queryServer.base64ToFile(s, fielName);
+//                    }
                 }
             }
 
@@ -131,7 +143,8 @@ public class WorkFlowUtil {
                 workflowRequestTableField.setFieldName(key);
                 workflowRequestTableField.setFieldValue(value);
                 if ("1".equals(isContract)&&StringUtils.isNotBlank(value)&&"xgfj".equals(key)){//合同审批
-                    workflowRequestTableField.setFieldType("base64:合同.pdf");
+                    Integer mblx = mainData.getInteger("mblx");
+                    workflowRequestTableField.setFieldType("base64:"+fielName1);
                 }
                 if (belongId.longValue()==XYbelongId&&StringUtils.isNotBlank(value)&&"xgfj".equals(key)){//协议
                     workflowRequestTableField.setFieldType("base64:"+fielName1);
@@ -234,4 +247,5 @@ public class WorkFlowUtil {
 //    public static void main(String[] args) {
 //        packageXML(new JSONObject());
 //    }
+
 }

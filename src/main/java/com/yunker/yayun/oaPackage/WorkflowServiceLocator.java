@@ -22,7 +22,8 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
     }
 
     // Use to get a proxy class for WorkflowServiceHttpPort
-    private java.lang.String WorkflowServiceHttpPort_address = "http://120.224.44.43:8089/services/WorkflowService";
+    private java.lang.String WorkflowServiceHttpPort_address = "http://bloomageoa.bloomagebiotech.com/services/WorkflowService";
+//    private java.lang.String WorkflowServiceHttpPort_address = "http://120.224.44.43:8089/services/WorkflowService";
 //    private java.lang.String WorkflowServiceHttpPort_address = "http://10.10.0.251:8089/services/WorkflowService";
 
     public java.lang.String getWorkflowServiceHttpPortAddress() {
