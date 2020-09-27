@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -208,7 +209,6 @@ public class HttpClientUtil extends HttpPut {
             httpPost.setEntity(urlEncodedFormEntity);
         }
         CloseableHttpResponse response = createClient().execute(httpPost);
-
         return handleResponse(httpPost, response, token, url, params);
     }
     public String postNosys(final String token, final String url, final Map<String, String> params) throws IOException {
@@ -490,6 +490,15 @@ public class HttpClientUtil extends HttpPut {
     public String get(final String token, final String url, final Map<String, String> params) throws IOException {
         CloseableHttpResponse response = getHttpResponse(token, url, params);
         return handleResponse(null, response, token, url, params);
+    }
+    public InputStream getInputStream(final String token, final String url, final Map<String, String> params) throws IOException {
+        CloseableHttpResponse response = getHttpResponse(token, url, params);
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode == 200) {
+            return response.getEntity().getContent();
+        }else {
+            return null;
+        }
     }
     public String getNosys(final String token, final String url, final Map<String, String> params) throws IOException {
         CloseableHttpResponse response = getHttpResponse(token, url, params);

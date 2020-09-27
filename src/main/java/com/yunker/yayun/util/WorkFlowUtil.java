@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.yunker.yayun.oaPackage.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -69,6 +72,7 @@ public class WorkFlowUtil {
                     if (xhfj != null && xhfj != 0){
                         String s = queryServer.downLoadDoc(xhfj);
                         fielName = queryServer.getDocInfo(xhfj);
+//                        FileUtils.writeByteArrayToFile(new File(fielName), IOUtils.toByteArray(s));
                         mainData.put("xgfj", "base64:"+s);
                         File file = queryServer.base64ToFile(s, fielName);
 //                    }

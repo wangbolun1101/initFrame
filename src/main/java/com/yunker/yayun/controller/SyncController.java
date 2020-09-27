@@ -96,7 +96,7 @@ public class SyncController extends CommonController{
            JSONObject jsonObject = jsonArray.getJSONObject(0);
            Map<Integer,String>ERPMap=new HashMap<>();
            Map<Long,JSONArray>ERPDataMap=new HashMap<>();
-           String fieldsByBelongId = queryServer.getFieldsByBelongId(1327054207746378L);
+           String fieldsByBelongId = queryServer.getFieldsByBelongId(1340810097180997L);
            JSONObject fieldsObject1 = JSONObject.parseObject(fieldsByBelongId);
            JSONArray fields = fieldsObject1.getJSONArray("fields");
            for (int i = 0; i < fields.size(); i++) {

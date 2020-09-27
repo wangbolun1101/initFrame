@@ -91,7 +91,7 @@ public class SyncOtherService extends CommonController {
             }
             Map<Integer, String> ERPMap = new HashMap<>();
             Map<Long, JSONArray> ERPDataMap = new HashMap<>();
-            String fieldsByBelongId = queryServer.getFieldsByBelongId(1327054207746378L);
+            String fieldsByBelongId = queryServer.getFieldsByBelongId(1340810097180997L);
             JSONObject object1 = JSONObject.parseObject(fieldsByBelongId);
             JSONArray fields = object1.getJSONArray("fields");
             for (int i = 0; i < fields.size(); i++) {
@@ -1459,7 +1459,7 @@ public class SyncOtherService extends CommonController {
     public String updateCustomerEditStatus(Long ERPDataId) throws Exception {
         JSONObject object = new JSONObject();
         object.put("id", ERPDataId);
-        object.put("customItem237__c", true);
+        object.put("customItem237__c", false);
         String post = queryServer.updateCustomizeByIdNoThrowException(object);
         return post;
     }

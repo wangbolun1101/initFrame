@@ -1,9 +1,9 @@
 package com.yunker.yayun.util;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -432,11 +432,13 @@ public class QueryServer extends ReturnPublic {
         }
         return file;
     }
-    public static File base64ToFile(String base64,String fileName) {
+    public static File base64ToFile(String base64,String fileName) throws IOException {
         if(base64==null||"".equals(base64)) {
             return null;
         }
-        byte[] buff= org.apache.tomcat.util.codec.binary.Base64.decodeBase64(base64);
+//        BASE64Decoder decoder = new BASE64Decoder();
+//        byte[] buff= decoder.decodeBuffer(base64);
+        byte[] buff = Base64.decodeBase64(base64);
         File file=null;
         FileOutputStream fout=null;
         try {
@@ -622,16 +624,27 @@ public class QueryServer extends ReturnPublic {
     }
 
     public String downLoadDoc(Long docId) throws Exception {
-        String s = httpClientUtil.getNosys(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/document/file/info?id=" + docId, null);
-        String imageString = getImageString(s);
+        InputStream inputStream = httpClientUtil.getInputStream(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/document/file/info?id=" + docId, null);
+        String imageString = getImageString(inputStream);//        String imageString = getImageString(s);
         return imageString;
     }
-    public static String getImageString(String fileData) throws IOException {
-        byte[] data = fileData.getBytes("ISO8859-1");
-        org.apache.tomcat.util.codec.binary.Base64 base64=new Base64();
-        byte[] encode = base64.encode(data);
-        String string = encode.toString();
-        return data != null ? string : "";
+    public String downLoadAllDoc(Long belongId,String dataId) throws Exception {
+        Map map=new HashMap();
+        map.put("belongId", belongId+"");
+        map.put("objectIds", dataId);
+        String s = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/file/v2.0/document/actions/batchDownloadByObjects", map);
+//        String imageString = getImageString(s);
+        return s;
+    }
+    public String downDocInputStream(Long docId) throws Exception {
+        InputStream inputStream = httpClientUtil.getInputStream(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/document/file/info?id=" + docId, null);
+        String imageString = getImageString(inputStream);
+        return imageString;
+    }
+    public static String getImageString(InputStream fileData) throws IOException {
+        byte[] data = IOUtils.toByteArray(fileData);
+        BASE64Encoder encoder = new BASE64Encoder();
+        return fileData != null ? encoder.encodeBuffer(data) : "";
     }
     public String getDocInfo(Long docId) throws Exception {
         String s = httpClientUtil.getNosys(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/document/info?id=" + docId, null);

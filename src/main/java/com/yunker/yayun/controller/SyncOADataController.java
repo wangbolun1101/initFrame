@@ -78,6 +78,67 @@ public class SyncOADataController extends CommonController{
         return token;
     }
 
+    /**
+     * 收票地址数据处理
+     * @return
+     */
+    @RequestMapping("/ReceiptAddressData")
+    @ResponseBody
+    public String ReceiptAddressData() throws Exception {
+        DateFormat dateFormat =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date start = dateFormat.parse("2020-09-14 00:00:01");
+        Date end = dateFormat.parse("2020-09-14 23:59:59");
+        String ERPAccountSql="select id from customEntity9__c where createdAt>"+start.getTime()+" and createdAt <"+end.getTime() +" and createdBy = 1185240";
+        JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPAccountSql);
+        JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPAccountSql);
+        for (int i = 0; i < allByXoqlSample3.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample3.getJSONObject(i);
+            jsonObject.put("customItem8__c", "同步成功");
+        }
+        bulkAPI.createDataTaskJob(allByXoqlSample3, "customEntity9__c", "update");
+        return null;
+    }
+    /**
+     * 收货地址数据处理
+     * @return
+     */
+    @RequestMapping("/AddressData")
+    @ResponseBody
+    public String AddressData() throws Exception {
+        DateFormat dateFormat =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date start = dateFormat.parse("2020-09-17 00:00:01");
+        Date end = dateFormat.parse("2020-09-17 23:59:59");
+        String ERPAccountSql="select id from customEntity7__c where createdAt>"+start.getTime()+" and createdAt <"+end.getTime() +" and createdBy = 1185240";
+        JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPAccountSql);
+        JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPAccountSql);
+        for (int i = 0; i < allByXoqlSample3.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample3.getJSONObject(i);
+            jsonObject.put("customItem8__c", "同步成功");
+        }
+        bulkAPI.createDataTaskJob(allByXoqlSample3, "customEntity7__c", "update");
+        return null;
+    }
+    /**
+     * 账户信息
+     * @return
+     */
+    @RequestMapping("/BankInfo")
+    @ResponseBody
+    public String BankInfo() throws Exception {
+        DateFormat dateFormat =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date start = dateFormat.parse("2020-08-20 00:00:01");
+        Date end = dateFormat.parse("2020-08-20 23:59:59");
+        String ERPAccountSql="select id from customEntity6__c where createdAt>"+start.getTime()+" and createdAt <"+end.getTime() +" and createdBy = 1185240";
+        JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPAccountSql);
+        JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPAccountSql);
+        for (int i = 0; i < allByXoqlSample3.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample3.getJSONObject(i);
+            jsonObject.put("customItem19__c", "同步成功");
+        }
+        bulkAPI.createDataTaskJob(allByXoqlSample3, "customEntity6__c", "update");
+        return null;
+    }
+
 
     /**
      * 导入收票地址
@@ -712,6 +773,8 @@ public class SyncOADataController extends CommonController{
             JSONArray itemAndLot = getItemAndLot();
             JSONArray itemArray=new JSONArray();
             JSONArray lotArray=new JSONArray();
+            Set set=new HashSet();
+            Set set1=new HashSet();
             for (int i = 0; i < itemAndLot.size(); i++) {
                 JSONObject itemObject=new JSONObject();
                 JSONObject lotObject=new JSONObject();
@@ -719,12 +782,16 @@ public class SyncOADataController extends CommonController{
                 String customItem130__c = jsonObject.getString("customItem130__c");
                 String customItem129__c = jsonObject.getString("customItem129__c");
                 if (StringUtils.isNotBlank(customItem130__c)){
-                    itemObject.put("item", customItem130__c);
-                    itemArray.add(itemObject);
+                    if (set.add(customItem130__c)){
+                        itemObject.put("item", customItem130__c);
+                        itemArray.add(itemObject);
+                    }
                 }
                 if (StringUtils.isNotBlank(customItem129__c)){
-                    lotObject.put("lot", customItem129__c);
-                    lotArray.add(lotObject);
+                    if (set1.add(customItem129__c)) {
+                        lotObject.put("lot", customItem129__c);
+                        lotArray.add(lotObject);
+                    }
                 }
             }
             JSONArray customerStandards = getCustomerStandards();
@@ -928,7 +995,7 @@ public class SyncOADataController extends CommonController{
         Holder<Object> pa2 = new Holder<>();
         idoWebServiceSoap.callMethod(token, "SP!", methodName, pa, pa2);
         //输出返回结果
-        System.err.println(pa.value);
+//        System.err.println(pa.value);
         return  pa.value;
     }
 
