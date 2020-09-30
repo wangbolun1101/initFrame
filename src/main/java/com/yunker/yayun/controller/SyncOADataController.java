@@ -8,6 +8,7 @@ import com.yunker.yayun.entity.Address;
 import com.yunker.yayun.entity.Credit;
 import com.yunker.yayun.log.ModuleOutputLogger;
 import com.yunker.yayun.oaPackage.*;
+import com.yunker.yayun.service.SyncOtherService;
 import com.yunker.yayun.util.*;
 import lombok.extern.slf4j.Slf4j;
 import mypackage.IDOWebService;
@@ -43,6 +44,9 @@ import java.util.*;
 public class SyncOADataController extends CommonController{
 
     @Autowired
+    private SyncOtherService syncOtherService;
+
+    @Autowired
     private HttpClientUtil httpClientUtil;
     @Autowired
     private QueryServer queryServer;
@@ -76,6 +80,39 @@ public class SyncOADataController extends CommonController{
             throw new Exception("验证Token出错！");
         }
         return token;
+    }
+
+    /**
+     * 收票地址数据处理
+     * @return
+     */
+    @RequestMapping("/upateAccountTaxpyerId")
+    @ResponseBody
+    public String upateAccountTaxpyerId() throws Exception {
+        syncOtherService.upateAccountTaxpyerId();
+        return "success";
+    }
+
+    /**
+     * 收票地址数据处理
+     * @return
+     */
+    @RequestMapping("/updateSuccess")
+    @ResponseBody
+    public String updateSuccess() throws Exception {
+        String sql="select id,customItem3__c,customItem4__c from customEntity63__c where customItem2__c is  not null and customItem5__c is null limit 0,300";
+        String bySql = queryServer.getBySql(sql);
+        JSONObject object = JSONObject.parseObject(bySql);
+        JSONArray records = object.getJSONArray("records");
+        for (int i = 0; i < records.size(); i++) {
+            JSONObject jsonObject = records.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            JSONObject object1=new JSONObject();
+            object1.put("id", id);
+            object1.put("customItem5__c", "同步成功");
+            queryServer.updateCustomizeById(object1);
+        }
+        return null;
     }
 
     /**

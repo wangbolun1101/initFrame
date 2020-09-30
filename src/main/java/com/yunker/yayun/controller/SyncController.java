@@ -278,7 +278,11 @@ public class SyncController extends CommonController{
            dataObject.put("uf_salescale",uf_salescale);
            dataObject.put("uf_lawsuit",uf_lawsuit);
            dataObject.put("uf_ifstop",uf_ifstop);
-
+           String ERPtoken1 = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+           String customNum = getCustomNum(ERPtoken1, startStr);
+           int indexStart = customNum.indexOf("</Parameter><Parameter ByRef=\"Y\">")+"</Parameter><Parameter ByRef=\"Y\">".length();
+           int indexEnd = customNum.indexOf("</Parameter></Parameters>");
+           String CustNum=customNum.substring(indexStart,indexEnd);//客户编号
            JSONArray ERPDataArray = ERPDataMap.get(accountId);
            for (int j = 0; j < ERPDataArray.size(); j++) {
                JSONObject ERPDataObject = ERPDataArray.getJSONObject(j);
@@ -287,12 +291,6 @@ public class SyncController extends CommonController{
 
                //调用接口,获取Sessiontoken
                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, ERPConfig);
-
-               String customNum = getCustomNum(ERPtoken, startStr);
-               int indexStart = customNum.indexOf("</Parameter><Parameter ByRef=\"Y\">")+"</Parameter><Parameter ByRef=\"Y\">".length();
-               int indexEnd = customNum.indexOf("</Parameter></Parameters>");
-               String CustNum=customNum.substring(indexStart,indexEnd);//客户编号
-
                String SalesTeamID=CustNum;//销售团队
                String cusUf_GlobalId=CustNum;//集团ID
 
@@ -372,6 +370,7 @@ public class SyncController extends CommonController{
                    ModuleOutputLogger.autoSyncAccount.info("分事业部信用额度同步结果："+otherCredits);
                }
            }
+           String s = updateAccountERPNo(accountId, CustNum);
 
 //           //同步分事业部信用额度
 //           if (StringUtils.isNotBlank(bu)){
@@ -1143,6 +1142,18 @@ public class SyncController extends CommonController{
         object.put("customItem2__c",customNum);
         object.put("customItem5__c  ","同步完成");
         String post = queryServer.updateCustomizeByIdNoThrowException(object);
+        return post;
+    }
+    /**
+     * 更新客户编号 ERP->CRM
+     * @param customNum
+     * @throws Exception
+     */
+    public String updateAccountERPNo(Long accountId,String customNum) throws Exception {
+        JSONObject object=new JSONObject();
+        object.put("id",accountId);
+        object.put("customItem201__c",customNum);
+        String post = queryServer.updateAccount(object);
         return post;
     }
 }

@@ -308,6 +308,7 @@ public class QueryServer extends ReturnPublic {
     public String getBySql(String sql) throws Exception {
         Map map=new HashMap();
         map.put("q",sql+" order by id");
+        Thread.sleep(200);
         String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/query", map);
         JSONObject object1 = JSONObject.parseObject(post);
         if (post.contains("error_code")){
@@ -653,4 +654,22 @@ public class QueryServer extends ReturnPublic {
         return fileName;
     }
 
+    public String updateAccount(JSONObject object) throws Exception {
+        String post1 = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/account/update", object.toString());
+        return post1;
+    }
+
+    public String getEnterPriseInfo(String accountName, String token) throws IOException {
+        String creditCode=null;
+        try {
+            Thread.sleep(400);
+            String s = httpClientUtil.get(token, "https://api.xiaoshouyi.com/data/v1/objects/enterprise/info?name=" + accountName, null);
+            JSONObject object = JSONObject.parseObject(s);
+            JSONObject result = object.getJSONObject("result");
+            creditCode=result.getString("creditCode");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return creditCode;
+    }
 }

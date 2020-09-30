@@ -51,31 +51,12 @@ public class WorkFlowUtil {
             JSONObject mainData = param.getJSONObject("mainData");
             Long belongId = param.getLong("belongId");
             if ("1".equals(isContract)){//合同审批
-//                Integer mblx = mainData.getInteger("mblx");
-//                if (mblx.intValue()==0){
-//                    String templateName="";
-//                    if ("CHN".equals(language)){//中文合同
-//                        templateName="原料销售合同（内销）";
-//                    }else {//英文合同
-//                        templateName=" 原料销售合同（外销）";
-//                    }
-//                    Map<Boolean, String> contract = queryServer.getContract(templateName, dataId);
-//                    Boolean key = contract.entrySet().iterator().next().getKey();
-//                    String value = contract.entrySet().iterator().next().getValue();
-//                    if (key){
-//                        mainData.put("xgfj", "base64:"+value);
-//                    }else {
-//                        log.error(value);
-//                    }
-//                }else {
                     Long xhfj = mainData.getLong("xgfj");
                     if (xhfj != null && xhfj != 0){
                         String s = queryServer.downLoadDoc(xhfj);
                         fielName = queryServer.getDocInfo(xhfj);
-//                        FileUtils.writeByteArrayToFile(new File(fielName), IOUtils.toByteArray(s));
                         mainData.put("xgfj", "base64:"+s);
                         File file = queryServer.base64ToFile(s, fielName);
-//                    }
                 }
             }
 

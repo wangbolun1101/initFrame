@@ -39,6 +39,8 @@ public class SyncOtherService extends CommonController {
     private LabelToValueUtil labelToValueUtil;
     @Autowired
     private CustomApi customApi;
+    @Autowired
+    private BulkAPI bulkAPI;
 
     //实例化接口
 //    private WorkflowService workflowService = new WorkflowService();
@@ -72,6 +74,32 @@ public class SyncOtherService extends CommonController {
         }
         return token;
     }
+
+    /**
+     * 更新客户纳税人识别号
+     */
+    @Scheduled(cron = "0 30 17 * * ?")
+    public void upateAccountTaxpyerId() throws Exception {
+        JSONArray jsonArray=new JSONArray();
+        String sql="select id,accountName from account where srcFlg=1 and customItem194__c is null";
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(sql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, sql);
+        String token = getToken();
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String accountName = jsonObject.getString("accountName");
+            String enterPriseInfo = queryServer.getEnterPriseInfo(accountName, token);
+            if (StringUtils.isNotBlank(enterPriseInfo)){
+                JSONObject object=new JSONObject();
+                object.put("id",id);
+                object.put("customItem194__c",enterPriseInfo);
+                jsonArray.add(object);
+            }
+        }
+        bulkAPI.createDataTaskJob(jsonArray, "account", "update");
+    }
+
 
 
     public void syncAccount1() {
@@ -926,7 +954,7 @@ public class SyncOtherService extends CommonController {
                         dataDetailObject.put("Description", Description);
                         dataDetailObject.put("PriceConv", PriceConv);
                         dataDetailObject.put("QtyOrderedConv", QtyOrderedConv);
-                        dataDetailObject.put("Disc", Disc);
+                        dataDetailObject.put("Disc", (100.00-Disc*100));
                         dataDetailObject.put("coiUf_StandNum", coiUf_StandNum);
                         dataDetailObject.put("Stat", Stat_OrderProduct);
                         dataDetailObject.put("InvoiceHold", InvoiceHold);
@@ -938,6 +966,7 @@ public class SyncOtherService extends CommonController {
                         dataDetailObject.put("UM", UM);
                         dataDetailObject.put("Whse", Whse);
                         dataDetailObject.put("ShipSite", ShipSite);
+                        dataDetailObject.put("RefType", "J");
 //                        dataDetailObject.put("oHXCoitemPacages.pt_num", oHXCoitemPacages_pt_num);
 //                        dataDetailObject.put("oHXCoitemPacages.matl_qty", oHXCoitemPacages_matl_qty);
 //                        dataDetailObject.put("oHXCoitemPacages.qty_package", oHXCoitemPacages_qty_package);
@@ -1103,7 +1132,7 @@ public class SyncOtherService extends CommonController {
                     dataDetailObject.put("Description", Description);
                     dataDetailObject.put("PriceConv", PriceConv);
                     dataDetailObject.put("QtyOrderedConv", QtyOrderedConv);
-                    dataDetailObject.put("Disc", Disc);
+                    dataDetailObject.put("Disc", (100.00-Disc*100));
                     dataDetailObject.put("coiUf_StandNum", coiUf_StandNum);
                     dataDetailObject.put("Stat", Stat_OrderProduct);
                     dataDetailObject.put("InvoiceHold", InvoiceHold);
@@ -1112,6 +1141,7 @@ public class SyncOtherService extends CommonController {
                     dataDetailObject.put("coiUf_Lot", coiUf_Lot);
                     dataDetailObject.put("coiUf_Note", coiUf_Note);
                     dataDetailObject.put("coiUf_rework", coiUf_rework);
+                    dataDetailObject.put("RefType", "J");
                     dataDetailObject.put("UM", UM);
                     dataDetailObject.put("Whse", Whse);
                     dataDetailObject.put("ShipSite", ShipSite);

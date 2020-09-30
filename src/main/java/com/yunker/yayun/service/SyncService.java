@@ -145,7 +145,7 @@ public class SyncService extends CommonController {
             ModuleOutputLogger.autoSyncAccount.info("校验json文件读取是否成功："+EndUserType1);
             String CRMtoken = getToken();
             //                                                                       注册地址           国家                    省洲                             公司成立日期       经营渠道                    线上/线下         邮政编码   客户类型         资信额度          条款              信用冻结          最终用户类型      区域                   货币
-            String sql="select id,customItem201__c,ownerId.employeeCode,ownerId.managerId,accountName,customItem181__c,customItem195__c,fState,customItem197__c,fCity,fDistrict,customItem210__c,customItem186__c,entityType,customItem199__c,zipCode,customItem205__c,customItem204__c,customItem206__c,customItem184__c,customItem190__c,customItem156__c,level,customItem233__c,customItem207__c,customItem208__c,customItem209__c,customItem211__c,customItem212__c,customItem213__c,customItem214__c,customItem218__c from account where customItem221__c >0 and approvalStatus = 3";
+            String sql="select id,customItem201__c,ownerId.employeeCode,ownerId.managerId,accountName,customItem181__c,customItem195__c,fState,customItem197__c,fCity,fDistrict,customItem210__c,customItem186__c,entityType,customItem199__c,zipCode,customItem205__c,customItem204__c,customItem206__c,customItem184__c,customItem190__c,customItem156__c,level,customItem233__c,customItem207__c,customItem208__c,customItem209__c,customItem211__c,customItem212__c,customItem213__c,customItem214__c,customItem218__c,customItem194__c from account where customItem221__c >0 and approvalStatus = 3";
             Map map=new HashMap();
             map.put("xoql",sql);
             String post = httpClientUtil.post(CRMtoken, "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
@@ -176,7 +176,7 @@ public class SyncService extends CommonController {
             }
 
             //查询erp账套
-            String ERPSql="select id,customItem3__c,customItem4__c from customEntity63__c where customItem2__c is null and customItem5__c<>'同步完成' and customItem3__c is not null";
+            String ERPSql="select id,customItem3__c,customItem4__c from customEntity63__c where customItem2__c is null and (customItem5__c<>'同步完成' or customItem5__c is null) and customItem3__c is not null";
             String bySql1 = queryServer.getBySql(ERPSql);
             JSONArray allERP = queryServer.findAll(getToken(), bySql1, ERPSql);
             for (int i = 0; i < allERP.size(); i++) {
@@ -311,6 +311,7 @@ public class SyncService extends CommonController {
                 CurrCode=excute4.getString(CurrCode);
 
                 String bu = getArrayToData(jsonObject, "customItem218__c");//事业部编号
+                String ReservedField1 = jsonObject.getString("customItem194__c");//纳税识别号
 
                 JSONObject dataObject=new JSONObject();
                 if("CNY".equals(CurrCode)){
@@ -363,22 +364,31 @@ public class SyncService extends CommonController {
                 dataObject.put("uf_salescale",uf_salescale);
                 dataObject.put("uf_lawsuit",uf_lawsuit);
                 dataObject.put("uf_ifstop",uf_ifstop);
+                dataObject.put("ReservedField1",ReservedField1);
 
 //                JSONArray jsonArray1 = JSONArray.parseArray("[\"CustNum\",\"CustSeq\",\"Name\",\"Addr_1\",\"Addr_2\",\"Addr_3\",\"Addr_4\",\"Country\",\"State\",\"City\",\"County\",\"Zip\",\"CustType\",\"CreditLimit\",\"TermsCode\",\"CreditHold\",\"EndUserType\",\"TerritoryCode\",\"SalesTeamID\",\"cusUf_GlobalId\",\"ShowInDropDownList\",\"CusShipmentApprovalRequired\",\"IncludeTaxInPrice\",\"CurrCode\",\"TaxCode1\"]");
+                //调用接口,获取Sessiontoken
 
+                String CustNum;//客户编号
+                String customItem201__c = jsonObject.getString("customItem201__c");
+                if (StringUtils.isNotBlank(customItem201__c)){
+                    CustNum=customItem201__c;
+                }else {
+                    String ERPtoken1 = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+                    String customNum = getCustomNum(ERPtoken1, startStr);
+                    int indexStart = customNum.indexOf("</Parameter><Parameter ByRef=\"Y\">") + "</Parameter><Parameter ByRef=\"Y\">".length();
+                    int indexEnd = customNum.indexOf("</Parameter></Parameters>");
+                    CustNum = customNum.substring(indexStart, indexEnd);
+                }
                 JSONArray ERPDataArray = ERPDataMap.get(accountId);
+                if (ERPDataArray==null){
+                    ERPDataArray=new JSONArray();
+                }
                 for (int j = 0; j < ERPDataArray.size(); j++) {
                     JSONObject ERPDataObject = ERPDataArray.getJSONObject(j);
                     String ERPConfig = ERPDataObject.getString("customItem3__c");
                     Long ERPDataId = ERPDataObject.getLong("id");
-
-                    //调用接口,获取Sessiontoken
                     String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, ERPConfig);
-
-                    String customNum = getCustomNum(ERPtoken, startStr);
-                    int indexStart = customNum.indexOf("</Parameter><Parameter ByRef=\"Y\">")+"</Parameter><Parameter ByRef=\"Y\">".length();
-                    int indexEnd = customNum.indexOf("</Parameter></Parameters>");
-                    String CustNum=customNum.substring(indexStart,indexEnd);//客户编号
 
                     String SalesTeamID=CustNum;//销售团队
                     String cusUf_GlobalId=CustNum;//集团ID
@@ -459,11 +469,10 @@ public class SyncService extends CommonController {
                         ModuleOutputLogger.autoSyncAccount.info("分事业部信用额度同步结果："+otherCredits);
                     }
                 }
-
-
-                System.out.println("同步客户--同步结束");
-                ModuleOutputLogger.autoSyncAccount.info("同步客户--同步结束");
+                String s = updateAccountERPNo(accountId, CustNum);
             }
+            System.out.println("同步客户--同步结束");
+            ModuleOutputLogger.autoSyncAccount.info("同步客户--同步结束");
 
         }catch (Exception e){
             e.printStackTrace();
@@ -480,10 +489,19 @@ public class SyncService extends CommonController {
         Long AddressId=0L;
         Integer CustSeq=null;
         try {
+            Map<Long,String>statusMap = new HashMap<>();
             System.out.println("同步收货地址--同步开始");
             ModuleOutputLogger.autoSyncAddress.info("同步收货地址--同步开始");
+            String v1Sql="select id from customEntity7__c where customItem8__c<>'同步成功' or customItem8__c is null";
+            String bySql = queryServer.getBySql(v1Sql);
+            JSONArray all = queryServer.findAll(getToken(), bySql, v1Sql);
+            for (int i = 0; i < all.size(); i++) {
+                JSONObject jsonObject = all.getJSONObject(i);
+                Long id = jsonObject.getLong("id");
+                statusMap.put(id, "success");
+            }
 
-            String sql="select id,customItem1__c.customItem233__c,customItem1__c.customItem201__c,name,customItem2__c,customItem3__c,customItem4__c,customItem5__c,customItem6__c,customItem7__c,customItem12__c from customEntity7__c where customItem8__c<>'同步成功'";
+            String sql="select id,customItem1__c.customItem233__c,customItem1__c.customItem201__c,name,customItem2__c,customItem3__c,customItem4__c,customItem5__c,customItem6__c,customItem7__c,customItem12__c from customEntity7__c where customItem8__c<>'同步成功' or customItem8__c is null";
             Map map=new HashMap();
             map.put("xoql",sql);
             String CRMResult = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
@@ -497,15 +515,28 @@ public class SyncService extends CommonController {
 
             for (int i = 0; i < CRMJsonArray.size(); i++) {
                 JSONObject jsonObject = CRMJsonArray.getJSONObject(i);
+                Long addressId = jsonObject.getLong("id");
+                if (StringUtils.isBlank(statusMap.get(addressId))){
+                    continue;
+                }
                 String ERPConfig = jsonObject.getString("customItem12__c");//账套
+                if (StringUtils.isBlank(ERPConfig)){
+                    continue;
+                }
                 //调用接口,获取Sessiontoken
-                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, ERPConfig);
+                String ERPtoken = null;
+                try {
+                    ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, ERPConfig);
+                } catch (Exception e) {
+                    e.getStackTrace();
+                    continue;
+                }
                 String CustNum = getData(jsonObject,"customItem1__c.customItem201__c");//客户编号
                 if (StringUtils.isBlank(CustNum)){
                     continue;
                 }
 
-                long addressId = jsonObject.getLongValue("id");
+
                 AddressId=addressId;
             /*
                 根据客户编号查询收货人地址，确认地址编号
@@ -614,6 +645,16 @@ public class SyncService extends CommonController {
             System.out.println("同步收票地址--同步开始");
             ModuleOutputLogger.autoSyncReceiotAddress.info("同步收票地址--同步开始");
 
+            Map<Long,String> statusMap = new HashMap<>();
+            String v1Sql="select id from customEntity9__c where customItem8__c<>'同步成功' or customItem8__c is null";
+            String bySql = queryServer.getBySql(v1Sql);
+            JSONArray all = queryServer.findAll(getToken(), bySql, v1Sql);
+            for (int i = 0; i < all.size(); i++) {
+                JSONObject jsonObject = all.getJSONObject(i);
+                Long id = jsonObject.getLong("id");
+                statusMap.put(id, "success");
+            }
+
             String sql="select id,customItem1__c.customItem201__c,name,customItem2__c,customItem3__c,customItem4__c,customItem5__c,customItem6__c,customItem7__c,customItem12__c from customEntity9__c where customItem8__c<>'同步成功'";
             Map map=new HashMap();
             map.put("xoql",sql);
@@ -627,14 +668,24 @@ public class SyncService extends CommonController {
             }
             for (int i = 0; i < CRMJsonArray.size(); i++) {
                 JSONObject jsonObject = CRMJsonArray.getJSONObject(i);
+                Long addressId = jsonObject.getLong("id");
+                if (StringUtils.isBlank(statusMap.get(addressId))){
+                    continue;
+                }
                 String ERPConfig = jsonObject.getString("customItem12__c");//账套
                 //调用接口,获取Sessiontoken
-                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, ERPConfig);
+                String ERPtoken = null;
+                try {
+                    ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, ERPConfig);
+                } catch (Exception e) {
+                    e.getStackTrace();
+                    continue;
+                }
                 String DropShipNo = getData(jsonObject,"customItem1__c.customItem201__c");//客户编号
                 if (StringUtils.isBlank(DropShipNo)){
                     continue;
                 }
-                long addressId = jsonObject.getLongValue("id");
+
                 AddressId=addressId;
             /*
                 根据客户编号查询收货人地址，确认地址编号
@@ -875,8 +926,18 @@ public class SyncService extends CommonController {
         try{
             System.out.println("同步账户信息--同步开始");
             ModuleOutputLogger.autoSyncBankInfo.info("同步账户信息--同步开始");
+            Map<Long,String>statusMap = new HashMap<>();
             //调用接口,获取Sessiontoken
             String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+
+            String v1Sql="select id from customEntity6__c where customItem19__c<>'同步成功' or customItem19__c is null";
+            String bySql = queryServer.getBySql(v1Sql);
+            JSONArray all = queryServer.findAll(getToken(), bySql, v1Sql);
+            for (int i = 0; i < all.size(); i++) {
+                JSONObject jsonObject = all.getJSONObject(i);
+                Long id = jsonObject.getLong("id");
+                statusMap.put(id, "success");
+            }
 
             String sql="select id,customItem1__c.customItem195__c,customItem1__c.customItem201__c,customItem4__c,customItem5__c,customItem6__c,customItem16__c,customItem15__c,customItem14__c,customItem9__c,customItem11__c,customItem7__c,customItem8__c from customEntity6__c where customItem19__c<>'同步成功'";
             Map map=new HashMap();
@@ -891,12 +952,16 @@ public class SyncService extends CommonController {
             }
             for (int i = 0; i < CRMJsonArray.size(); i++) {
                 JSONObject jsonObject = CRMJsonArray.getJSONObject(i);
+
+                Long bankId = jsonObject.getLong("id");
+                if (StringUtils.isBlank(statusMap.get(bankId))){
+                    continue;
+                }
                 String CustNum = getData(jsonObject, "customItem1__c.customItem201__c");//客户编号
                 String country = getSplitData(jsonObject,"customItem1__c.customItem195__c");//国家
                 if (StringUtils.isBlank(CustNum)){
                     continue;
                 }
-                long bankId = jsonObject.getLongValue("id");
                 BankId=bankId;
 
                 String cusUf_Bank=getData(jsonObject,"customItem4__c");//开户行
@@ -1012,8 +1077,20 @@ public class SyncService extends CommonController {
         JSONObject object=new JSONObject();
         object.put("id",ERPDataId);
         object.put("customItem2__c",customNum);
-        object.put("customItem5__c  ","同步完成");
+        object.put("customItem5__c","同步完成");
         String post = queryServer.updateCustomizeByIdNoThrowException(object);
+        return post;
+    }
+    /**
+     * 更新客户编号 ERP->CRM
+     * @param customNum
+     * @throws Exception
+     */
+    public String updateAccountERPNo(Long accountId,String customNum) throws Exception {
+        JSONObject object=new JSONObject();
+        object.put("id",accountId);
+        object.put("customItem201__c",customNum);
+        String post = queryServer.updateAccount(object);
         return post;
     }
 
