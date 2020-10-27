@@ -1,5 +1,5 @@
 /**
- * WorkflowServiceLocator.java
+ * HXCRMServiceLocator.java
  *
  * This file was auto-generated from WSDL
  * by the Apache Axis 1.4 Apr 22, 2006 (06:55:48 PDT) WSDL2Java emitter.
@@ -7,54 +7,54 @@
 
 package com.yunker.yayun.oaPackage;
 
-public class WorkflowServiceLocator extends org.apache.axis.client.Service implements com.yunker.yayun.oaPackage.WorkflowService {
+public class HXCRMServiceLocator extends org.apache.axis.client.Service implements com.yunker.yayun.oaPackage.HXCRMService {
 
-    public WorkflowServiceLocator() {
+    public HXCRMServiceLocator() {
     }
 
 
-    public WorkflowServiceLocator(org.apache.axis.EngineConfiguration config) {
+    public HXCRMServiceLocator(org.apache.axis.EngineConfiguration config) {
         super(config);
     }
 
-    public WorkflowServiceLocator(java.lang.String wsdlLoc, javax.xml.namespace.QName sName) throws javax.xml.rpc.ServiceException {
+    public HXCRMServiceLocator(java.lang.String wsdlLoc, javax.xml.namespace.QName sName) throws javax.xml.rpc.ServiceException {
         super(wsdlLoc, sName);
     }
 
-    // Use to get a proxy class for WorkflowServiceHttpPort
-//    private java.lang.String WorkflowServiceHttpPort_address = "http://10.10.0.251:8089/services/WorkflowService";
-    private java.lang.String WorkflowServiceHttpPort_address = "http://bloomageoa.bloomagebiotech.com/services/WorkflowService";
+    // Use to get a proxy class for HXCRMServiceHttpPort
+//    private java.lang.String HXCRMServiceHttpPort_address = "http://10.10.0.251:8089/services/HXCRMService";
+    private java.lang.String HXCRMServiceHttpPort_address = "http://bloomageoa.bloomagebiotech.com/services/HXCRMService";
 
-    public java.lang.String getWorkflowServiceHttpPortAddress() {
-        return WorkflowServiceHttpPort_address;
+    public java.lang.String getHXCRMServiceHttpPortAddress() {
+        return HXCRMServiceHttpPort_address;
     }
 
     // The WSDD service name defaults to the port name.
-    private java.lang.String WorkflowServiceHttpPortWSDDServiceName = "WorkflowServiceHttpPort";
+    private java.lang.String HXCRMServiceHttpPortWSDDServiceName = "HXCRMServiceHttpPort";
 
-    public java.lang.String getWorkflowServiceHttpPortWSDDServiceName() {
-        return WorkflowServiceHttpPortWSDDServiceName;
+    public java.lang.String getHXCRMServiceHttpPortWSDDServiceName() {
+        return HXCRMServiceHttpPortWSDDServiceName;
     }
 
-    public void setWorkflowServiceHttpPortWSDDServiceName(java.lang.String name) {
-        WorkflowServiceHttpPortWSDDServiceName = name;
+    public void setHXCRMServiceHttpPortWSDDServiceName(java.lang.String name) {
+        HXCRMServiceHttpPortWSDDServiceName = name;
     }
 
-    public com.yunker.yayun.oaPackage.WorkflowServicePortType getWorkflowServiceHttpPort() throws javax.xml.rpc.ServiceException {
+    public com.yunker.yayun.oaPackage.HXCRMServicePortType getHXCRMServiceHttpPort() throws javax.xml.rpc.ServiceException {
        java.net.URL endpoint;
         try {
-            endpoint = new java.net.URL(WorkflowServiceHttpPort_address);
+            endpoint = new java.net.URL(HXCRMServiceHttpPort_address);
         }
         catch (java.net.MalformedURLException e) {
             throw new javax.xml.rpc.ServiceException(e);
         }
-        return getWorkflowServiceHttpPort(endpoint);
+        return getHXCRMServiceHttpPort(endpoint);
     }
 
-    public com.yunker.yayun.oaPackage.WorkflowServicePortType getWorkflowServiceHttpPort(java.net.URL portAddress) throws javax.xml.rpc.ServiceException {
+    public com.yunker.yayun.oaPackage.HXCRMServicePortType getHXCRMServiceHttpPort(java.net.URL portAddress) throws javax.xml.rpc.ServiceException {
         try {
-            com.yunker.yayun.oaPackage.WorkflowServiceHttpBindingStub _stub = new com.yunker.yayun.oaPackage.WorkflowServiceHttpBindingStub(portAddress, this);
-            _stub.setPortName(getWorkflowServiceHttpPortWSDDServiceName());
+            com.yunker.yayun.oaPackage.HXCRMServiceHttpBindingStub _stub = new com.yunker.yayun.oaPackage.HXCRMServiceHttpBindingStub(portAddress, this);
+            _stub.setPortName(getHXCRMServiceHttpPortWSDDServiceName());
             return _stub;
         }
         catch (org.apache.axis.AxisFault e) {
@@ -62,8 +62,8 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
         }
     }
 
-    public void setWorkflowServiceHttpPortEndpointAddress(java.lang.String address) {
-        WorkflowServiceHttpPort_address = address;
+    public void setHXCRMServiceHttpPortEndpointAddress(java.lang.String address) {
+        HXCRMServiceHttpPort_address = address;
     }
 
     /**
@@ -73,9 +73,9 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
      */
     public java.rmi.Remote getPort(Class serviceEndpointInterface) throws javax.xml.rpc.ServiceException {
         try {
-            if (com.yunker.yayun.oaPackage.WorkflowServicePortType.class.isAssignableFrom(serviceEndpointInterface)) {
-                com.yunker.yayun.oaPackage.WorkflowServiceHttpBindingStub _stub = new com.yunker.yayun.oaPackage.WorkflowServiceHttpBindingStub(new java.net.URL(WorkflowServiceHttpPort_address), this);
-                _stub.setPortName(getWorkflowServiceHttpPortWSDDServiceName());
+            if (com.yunker.yayun.oaPackage.HXCRMServicePortType.class.isAssignableFrom(serviceEndpointInterface)) {
+                com.yunker.yayun.oaPackage.HXCRMServiceHttpBindingStub _stub = new com.yunker.yayun.oaPackage.HXCRMServiceHttpBindingStub(new java.net.URL(HXCRMServiceHttpPort_address), this);
+                _stub.setPortName(getHXCRMServiceHttpPortWSDDServiceName());
                 return _stub;
             }
         }
@@ -95,8 +95,8 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
             return getPort(serviceEndpointInterface);
         }
         java.lang.String inputPortName = portName.getLocalPart();
-        if ("WorkflowServiceHttpPort".equals(inputPortName)) {
-            return getWorkflowServiceHttpPort();
+        if ("HXCRMServiceHttpPort".equals(inputPortName)) {
+            return getHXCRMServiceHttpPort();
         }
         else  {
             java.rmi.Remote _stub = getPort(serviceEndpointInterface);
@@ -106,7 +106,7 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
     }
 
     public javax.xml.namespace.QName getServiceName() {
-        return new javax.xml.namespace.QName("webservices.services.weaver.com.cn", "WorkflowService");
+        return new javax.xml.namespace.QName("http://10.10.0.251/services/HXCRMService", "HXCRMService");
     }
 
     private java.util.HashSet ports = null;
@@ -114,7 +114,7 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
     public java.util.Iterator getPorts() {
         if (ports == null) {
             ports = new java.util.HashSet();
-            ports.add(new javax.xml.namespace.QName("webservices.services.weaver.com.cn", "WorkflowServiceHttpPort"));
+            ports.add(new javax.xml.namespace.QName("http://10.10.0.251/services/HXCRMService", "HXCRMServiceHttpPort"));
         }
         return ports.iterator();
     }
@@ -124,8 +124,8 @@ public class WorkflowServiceLocator extends org.apache.axis.client.Service imple
     */
     public void setEndpointAddress(java.lang.String portName, java.lang.String address) throws javax.xml.rpc.ServiceException {
         
-if ("WorkflowServiceHttpPort".equals(portName)) {
-            setWorkflowServiceHttpPortEndpointAddress(address);
+if ("HXCRMServiceHttpPort".equals(portName)) {
+            setHXCRMServiceHttpPortEndpointAddress(address);
         }
         else 
 { // Unknown Port Name

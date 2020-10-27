@@ -56,7 +56,6 @@ public class WorkFlowUtil {
                         String s = queryServer.downLoadDoc(xhfj);
                         fielName = queryServer.getDocInfo(xhfj);
                         mainData.put("xgfj", "base64:"+s);
-                        File file = queryServer.base64ToFile(s, fielName);
                 }
             }
 

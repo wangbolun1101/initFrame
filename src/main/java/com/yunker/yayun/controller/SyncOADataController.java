@@ -7,8 +7,9 @@ import com.yunker.yayun.config.FlowErrorCode;
 import com.yunker.yayun.entity.Address;
 import com.yunker.yayun.entity.Credit;
 import com.yunker.yayun.log.ModuleOutputLogger;
-import com.yunker.yayun.oaPackage.*;
-import com.yunker.yayun.service.SyncOtherService;
+import com.yunker.yayun.oaPackage.WorkflowRequestInfo;
+import com.yunker.yayun.oaPackage.WorkflowServiceLocator;
+import com.yunker.yayun.oaPackage.WorkflowServicePortType;
 import com.yunker.yayun.util.*;
 import lombok.extern.slf4j.Slf4j;
 import mypackage.IDOWebService;
@@ -24,9 +25,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.xml.rpc.ServiceException;
 import javax.xml.ws.Holder;
-import java.awt.geom.Area;
 import java.io.File;
 import java.io.FileInputStream;
 import java.math.BigDecimal;
@@ -43,8 +42,8 @@ import java.util.*;
 @CrossOrigin(origins = "https://login.xiaoshouyi.com", maxAge = 3600)
 public class SyncOADataController extends CommonController{
 
-    @Autowired
-    private SyncOtherService syncOtherService;
+//    @Autowired
+//    private SyncOtherService syncOtherService;
 
     @Autowired
     private HttpClientUtil httpClientUtil;
@@ -82,6 +81,192 @@ public class SyncOADataController extends CommonController{
         return token;
     }
 
+    @RequestMapping("updateAddress")
+    public void updateAddress() throws Exception {
+        JSONArray jsonArray=new JSONArray();
+        JSONArray addArray=new JSONArray();
+        JSONArray deleteArray=new JSONArray();
+        jsonArray.add("LIVE_SDUSA");
+//        jsonArray.add("LIVE_HXYLQX");
+//        jsonArray.add("LIVE_HXLMD");
+        jsonArray.add("LIVE_SDHY");
+//        jsonArray.add("LIVE_BJHY");
+        jsonArray.add("LIVE_HXSW");
+
+        Map<String,JSONObject> accountMap =new HashMap<>();
+        Map<String,JSONArray> ERPMap =new HashMap<>();
+        Map<String,String> ERPDataMap =new HashMap<>();
+        Map<String,String> addressExisitMap =new HashMap<>();
+        Map<String,Integer> countryMap =new HashMap<>();
+        Map<String,Integer> stateMap =new HashMap<>();
+        Map<String,Integer> cityMap =new HashMap<>();
+
+        String fieldsByBelongId = queryServer.getFieldsByBelongId(729747521339673L);
+        JSONObject object1 = JSONObject.parseObject(fieldsByBelongId);
+        JSONArray fields = object1.getJSONArray("fields");
+        for (int i = 0; i < fields.size(); i++) {
+            JSONObject jsonObject = fields.getJSONObject(i);
+            String propertyname = jsonObject.getString("propertyname");
+            if ("customItem5__c".equals(propertyname)) {
+                JSONArray selectitem = jsonObject.getJSONArray("selectitem");
+                for (int j = 0; j < selectitem.size(); j++) {
+                    JSONObject jsonObject1 = selectitem.getJSONObject(j);
+                    Integer value = jsonObject1.getInteger("value");
+                    String lable = jsonObject1.getString("label");
+                    countryMap.put(lable, value);
+                }
+            }
+            if ("customItem6__c".equals(propertyname)) {
+                JSONArray selectitem = jsonObject.getJSONArray("selectitem");
+                for (int j = 0; j < selectitem.size(); j++) {
+                    JSONObject jsonObject1 = selectitem.getJSONObject(j);
+                    Integer value = jsonObject1.getInteger("value");
+                    String lable = jsonObject1.getString("label");
+                    stateMap.put(lable, value);
+                }
+            }
+            if ("customItem7__c".equals(propertyname)) {
+                JSONArray selectitem = jsonObject.getJSONArray("selectitem");
+                for (int j = 0; j < selectitem.size(); j++) {
+                    JSONObject jsonObject1 = selectitem.getJSONObject(j);
+                    Integer value = jsonObject1.getInteger("value");
+                    String lable = jsonObject1.getString("label");
+                    cityMap.put(lable, value);
+                }
+            }
+        }
+
+
+
+        String accountSql = "select id,customItem2__c,customItem7__c,customItem4__c,customItem11__c  from customEntity63__c";
+        String bySql = queryServer.getBySql(accountSql);
+        JSONArray all = queryServer.findAll(getToken(), bySql, accountSql);
+        for (int i = 0; i < all.size(); i++) {
+            JSONObject jsonObject = all.getJSONObject(i);
+            String customItem2__c = jsonObject.getString("customItem2__c");//客户编号
+            String customItem7__c = jsonObject.getString("customItem7__c");//erp账套
+            accountMap.put(customItem2__c+","+customItem7__c, jsonObject);
+        }
+        Map<String, Long> allUsers = queryServer.getAllUsers();
+        String sql="select id,name,customItem1__c,customItem11__c,customItem13__c,customItem12__c from customEntity7__c";
+        String bySql1 = queryServer.getBySql(sql);
+        JSONArray addressArray = queryServer.findAll(getToken(), bySql1, sql);
+
+        for (int i = 0; i < jsonArray.size(); i++) {
+            String config = jsonArray.getString(i);
+            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+            String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "CustSeq,CustNum,Name,Addr_1,Addr_2,Addr_3,Addr_4,Country,State,City,Contact_2,Phone_2,CurrCode", "", "", "", 300000);
+            JSONObject resultJson = JSONObject.parseObject(result);
+            JSONArray propertyList = resultJson.getJSONArray("PropertyList");
+            JSONArray Items = resultJson.getJSONArray("Items");
+            JSONArray propertyArray=new JSONArray();
+            for (int j = 0; j < Items.size(); j++) {
+                JSONObject jsonObject1 = Items.getJSONObject(j);
+                JSONArray properties = jsonObject1.getJSONArray("Properties");
+                JSONObject propertieObject=new JSONObject();
+                for (int k = 0; k < properties.size(); k++) {
+                    JSONObject jsonObject2 = properties.getJSONObject(k);
+                    String property_0 = jsonObject2.getString("Property");
+                    String string = propertyList.getString(k);
+                    propertieObject.put(string, property_0);
+                }
+                propertyArray.add(propertieObject);
+            }
+            ERPMap.put(config, propertyArray);
+        }
+        for (Map.Entry<String, JSONArray> item : ERPMap.entrySet()) {
+            String config = item.getKey();
+            JSONArray value = item.getValue();
+            for (int i = 0; i < value.size(); i++) {
+                JSONObject jsonObject = value.getJSONObject(i);
+                String custSeq = jsonObject.getString("CustSeq");
+                String CustNum = jsonObject.getString("CustNum");
+                ERPDataMap.put(config+","+CustNum+","+custSeq, "success");
+            }
+        };
+        for (int i = 0; i < addressArray.size(); i++) {
+            JSONObject jsonObject = addressArray.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String accountNum = jsonObject.getString("customItem13__c");
+            String config = jsonObject.getString("customItem12__c");
+            String custSeq = jsonObject.getString("erp_id__c");
+            String s = ERPDataMap.get(config + "," + accountNum + "," + custSeq);
+           addressExisitMap.put(config + "," + accountNum + "," + custSeq, "success");
+            if (StringUtils.isBlank(s)){
+                addressArray.remove(jsonObject);
+                i--;
+                JSONObject deleteObject =new JSONObject();
+                deleteObject.put("id", id);
+                deleteArray.add(deleteObject);
+            }
+        }
+        for (Map.Entry<String, JSONArray> item : ERPMap.entrySet()) {
+            String config = item.getKey();
+            JSONArray value = item.getValue();
+            for (int i = 0; i < value.size(); i++) {
+                JSONObject jsonObject = value.getJSONObject(i);
+                String custSeq = jsonObject.getString("CustSeq");
+                String CustNum = jsonObject.getString("CustNum");
+                String s = addressExisitMap.get(config + "," + CustNum + "," + custSeq);
+                if (StringUtils.isBlank(s)){//不存在，创建
+                    addressExisitMap.put(config + "," + CustNum + "," + custSeq, "success");
+                    String addr_1 = jsonObject.getString("Addr_1");
+                    String addr_2 = jsonObject.getString("Addr_2");
+                    String addr_3 = jsonObject.getString("Addr_3");
+                    String addr_4 = jsonObject.getString("Addr_4");
+                    String country = jsonObject.getString("Country");
+                    String State = jsonObject.getString("State");
+                    String City = jsonObject.getString("City");
+                    String Name = jsonObject.getString("Name");
+                    String contact_2 = jsonObject.getString("Contact_2");
+                    String Phone_2 = jsonObject.getString("Phone_2");
+                    String string = provinceReverseJson.getString(State);
+                    Integer stateInteger = stateMap.get(string);
+                    Integer cityInteger = cityMap.get(City);
+                    JSONObject accountERP = accountMap.get(CustNum + "," + config);
+                    if (accountERP==null){
+                        continue;
+                    }
+                    Long erpId = accountERP.getLong("id");
+                    String accountOwner = accountERP.getString("customItem11__c");
+                    Long accountId = accountERP.getLong("customItem4__c");
+                    Long accountOwnerId = allUsers.get(accountOwner);
+
+
+                    Integer countryInteger = countryMap.get(country);
+                    JSONObject addObject = new JSONObject();
+                    addObject.put("customItem2__c", contact_2);
+                    addObject.put("customItem3__c", Phone_2);
+                    addObject.put("customItem4__c", addr_1+addr_2+addr_3+addr_4);
+                    addObject.put("customItem5__c", countryInteger);
+                    addObject.put("customItem6__c", stateInteger);
+                    addObject.put("customItem7__c", cityInteger);
+                    addObject.put("erp_id__c", custSeq);
+                    addObject.put("customItem8__c", "同步成功");
+                    if (accountOwnerId!=null&&accountOwnerId!=0){
+                        addObject.put("ownerId", accountOwnerId);
+                    }
+                    addObject.put("customItem1__c", accountId);
+                    addObject.put("customItem11__c", erpId);
+                    addObject.put("entityType", 729741452263662L);
+                    addObject.put("name", Name);
+                    addArray.add(addObject);
+                }
+            }
+        };
+
+        if (deleteArray.size()>0){
+            bulkAPI.createDataTaskJob(deleteArray, "customEntity7__c", "delete");
+        }
+        if (addArray.size()>0){
+            bulkAPI.createDataTaskJob(addArray, "customEntity7__c", "insert");
+        }
+    }
+
+
+
+
+
     /**
      * 收票地址数据处理
      * @return
@@ -89,7 +274,7 @@ public class SyncOADataController extends CommonController{
     @RequestMapping("/upateAccountTaxpyerId")
     @ResponseBody
     public String upateAccountTaxpyerId() throws Exception {
-        syncOtherService.upateAccountTaxpyerId();
+//        syncOtherService.upateAccountTaxpyerId();
         return "success";
     }
 
@@ -306,10 +491,10 @@ public class SyncOADataController extends CommonController{
     @RequestMapping("/importPriceBook")
     @ResponseBody
     public String importPriceBook() throws Exception {
-        JSONArray jsonArray=new JSONArray();
         JSONArray priceBookArray=new JSONArray();
         JSONArray updatepriceBookEntryArray=new JSONArray();
         JSONArray insertpriceBookEntryArray=new JSONArray();
+        JSONArray jsonArray=new JSONArray();
         jsonArray.add("LIVE_SDUSA");
         jsonArray.add("LIVE_SDHY");
         jsonArray.add("LIVE_HXSW");

@@ -672,4 +672,88 @@ public class QueryServer extends ReturnPublic {
         }
         return creditCode;
     }
+    public void sendMessage(JSONObject requestJSON) throws Exception {
+        Thread.sleep(400);
+        String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/notice/v2.0/newNotice", requestJSON.toJSONString());
+        System.out.println("发送通知消息:"+post);
+    }
+
+    public JSONObject getCustomInfo(Long dataId) throws Exception {
+        Thread.sleep(400);
+        String s = httpClientUtil.get(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/customize/info?id=" + dataId, null);
+        JSONObject object = JSONObject.parseObject(s);
+        return object;
+    }
+    public Long getFlowId(Long dataID, Long belongID) throws Exception {
+        int pageNo = 1;
+        int pageSize = 25;
+        String url = "https://api.xiaoshouyi.com/data/v1/objects/approval/approvals?pageNo=" + pageNo + "&pageSize=" + pageSize + "&userId=743527959707865";
+        Long id = null;
+        String s = httpClientUtil.get(getToken(), url, null);
+        JSONObject object = JSONObject.parseObject(s);
+        Integer totalSize = object.getInteger("totalSize");
+        JSONArray records = object.getJSONArray("records");
+        if (totalSize > pageSize) {
+            while (pageNo * pageSize < totalSize) {
+                pageNo++;
+                //获取符合条件的数组
+                String result = httpClientUtil.get(getToken(), url, null);
+                JSONArray jsonArray = JSONObject.parseObject(result).getJSONArray("records");
+                records.addAll(jsonArray);
+            }
+        }
+        for (int i = 0; i < records.size(); i++) {
+            JSONObject jsonObject = records.getJSONObject(i);
+            Long belongId = jsonObject.getLong("belongId");
+            Long dataId = jsonObject.getLong("dataId");
+            Long folwId = jsonObject.getLong("id");
+            if (belongId.longValue() != belongID.longValue()) {
+                continue;
+            }
+            if (dataId.longValue() != dataID.longValue()) {
+                continue;
+            } else {
+                id = folwId;
+            }
+
+        }
+        return id;
+    }
+    public void notAgreeApprove(Long approvalId) throws Exception {
+        String url = "https://api.xiaoshouyi.com/data/v1/objects/approval/refuse";
+        JSONObject object = new JSONObject();
+        object.put("approvalId", approvalId);
+        object.put("comments", "OA审批拒绝后，自动审批拒绝");
+        String post = httpClientUtil.post(getToken(), url, object.toJSONString());
+        System.out.println("OA审批拒绝后，自动审批拒绝 ========> " + post);
+    }
+    public void updatePriceBookEntry(Long priceBookEntryId,JSONObject param) throws Exception {
+        String url = "https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/priceBookEntry/"+priceBookEntryId;
+        JSONObject object = new JSONObject();
+        object.put("data", param);
+        String post = httpClientUtil.patch(getToken(), url, object.toJSONString());
+        System.out.println("更新价格表明细 ========> " + post);
+    }
+
+    public void createPriceBookEntry(JSONObject priceDetailJson) throws Exception {
+        JSONObject object = new JSONObject();
+        object.put("data", priceDetailJson);
+        String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/priceBookEntry", object.toJSONString());
+        System.out.println("创建价格表明细 ========> " + post);
+    }
+    public Long createPriceBook(JSONObject priceJson) throws Exception {
+        Long priceBookId = null;
+        JSONObject object = new JSONObject();
+        object.put("data", priceJson);
+        String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/priceBook", object.toJSONString());
+        System.out.println("创建价格表 ========> " + post);
+        try {
+            JSONObject resultJson = JSONObject.parseObject(post);
+            resultJson = resultJson.getJSONObject("result");
+            priceBookId = resultJson.getLong("id");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return priceBookId;
+    }
 }

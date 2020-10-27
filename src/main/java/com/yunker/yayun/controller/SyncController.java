@@ -83,7 +83,7 @@ public class SyncController extends CommonController{
            ModuleOutputLogger.handSyncAccount.info("客户id："+accountId);
            String CRMtoken = getToken();
            //调用接口,获取Sessiontoken
-           String sql="select id,ownerId.employeeCode,ownerId.managerId,accountName,customItem181__c,customItem195__c,fState,customItem197__c,fCity,fDistrict,customItem210__c,customItem186__c,entityType,customItem199__c,zipCode,customItem205__c,customItem204__c,customItem206__c,customItem184__c,customItem190__c,customItem156__c,level,customItem233__c,customItem207__c,customItem208__c,customItem209__c,customItem211__c,customItem212__c,customItem213__c,customItem214__c,customItem218__c from account where customItem201__c is null and approvalStatus = 3";
+           String sql="select id,ownerId.employeeCode,ownerId.managerId,accountName,customItem181__c,customItem195__c,fState,customItem197__c,fCity,fDistrict,customItem210__c,customItem186__c,entityType,customItem199__c,zipCode,customItem205__c,customItem204__c,customItem206__c,customItem184__c,customItem190__c,customItem156__c,level,customItem233__c,customItem207__c,customItem208__c,customItem209__c,customItem211__c,customItem212__c,customItem213__c,customItem214__c,customItem218__c,customItem194__c from account where customItem201__c is null and approvalStatus = 3";
            Map map=new HashMap();
            map.put("xoql",sql);
            String post = httpClientUtil.post(CRMtoken, "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
@@ -229,6 +229,8 @@ public class SyncController extends CommonController{
            JSONObject excute4 = super.moneyJson;
            CurrCode=excute4.getString(CurrCode);
            String bu = getArrayToData(jsonObject, "customItem218__c");//事业部编号
+           String ReservedField1 = jsonObject.getString("customItem194__c");//纳税识别号
+
 
            JSONObject dataObject=new JSONObject();
            if("CNY".equals(CurrCode)){
@@ -278,6 +280,8 @@ public class SyncController extends CommonController{
            dataObject.put("uf_salescale",uf_salescale);
            dataObject.put("uf_lawsuit",uf_lawsuit);
            dataObject.put("uf_ifstop",uf_ifstop);
+           dataObject.put("ReservedField1",ReservedField1);
+
            String ERPtoken1 = idoWebServiceSoap.createSessionToken(userId, pswd, config);
            String customNum = getCustomNum(ERPtoken1, startStr);
            int indexStart = customNum.indexOf("</Parameter><Parameter ByRef=\"Y\">")+"</Parameter><Parameter ByRef=\"Y\">".length();

@@ -313,6 +313,7 @@ public class SyncService extends CommonController {
                 String bu = getArrayToData(jsonObject, "customItem218__c");//事业部编号
                 String ReservedField1 = jsonObject.getString("customItem194__c");//纳税识别号
 
+
                 JSONObject dataObject=new JSONObject();
                 if("CNY".equals(CurrCode)){
                     dataObject.put("BankCode","100");
@@ -365,6 +366,7 @@ public class SyncService extends CommonController {
                 dataObject.put("uf_lawsuit",uf_lawsuit);
                 dataObject.put("uf_ifstop",uf_ifstop);
                 dataObject.put("ReservedField1",ReservedField1);
+
 
 //                JSONArray jsonArray1 = JSONArray.parseArray("[\"CustNum\",\"CustSeq\",\"Name\",\"Addr_1\",\"Addr_2\",\"Addr_3\",\"Addr_4\",\"Country\",\"State\",\"City\",\"County\",\"Zip\",\"CustType\",\"CreditLimit\",\"TermsCode\",\"CreditHold\",\"EndUserType\",\"TerritoryCode\",\"SalesTeamID\",\"cusUf_GlobalId\",\"ShowInDropDownList\",\"CusShipmentApprovalRequired\",\"IncludeTaxInPrice\",\"CurrCode\",\"TaxCode1\"]");
                 //调用接口,获取Sessiontoken
@@ -573,6 +575,9 @@ public class SyncService extends CommonController {
                 JSONObject excute = super.provinceJson;
                 State=excute.getString(State);
                 String City = getArrayToData(jsonObject,"customItem7__c");//城市
+                if (StringUtils.isNotBlank(City)) {
+                    City = City.replace("[\"", "").replace("\"]", "");
+                }
                 //县	 County todo 系统暂无该字段
                 //邮编	Zip todo 系统暂无该字段
                 String Contact_2 = getData(jsonObject,"customItem2__c");//收货联系人
@@ -725,6 +730,9 @@ public class SyncService extends CommonController {
                 JSONObject excute = super.provinceJson;
                 State=excute.getString(State);
                 String City = getArrayToData(jsonObject,"customItem7__c");//城市
+                if (StringUtils.isNotBlank(City)){
+                    City=City.replace("[\"", "").replace("\"]", "");
+                }
                 //县	 County todo 系统暂无该字段
                 //邮编	Zip todo 系统暂无该字段
                 String Contact = getData(jsonObject,"customItem2__c");//发票联系人
