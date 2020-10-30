@@ -79,8 +79,9 @@ public class SyncOtherService extends CommonController {
         return token;
     }
 
-//    @Scheduled(cron = "0 0/5 * * * ?")
-    @Scheduled(cron = "0/5 * * * * ?")
+
+    @Scheduled(cron = "0 0/5 * * * ?")
+//    @Scheduled(cron = "0/5 * * * * ?")
     public void updateOrderOverDate(){
         String sql="select id,customItem186__c,customItem222__c,customItem223__c,amount from _order where customItem205__c is null and customItem206__c is null and customItem207__c is null and customItem208__c is null";
         try {
@@ -988,7 +989,7 @@ public class SyncOtherService extends CommonController {
     }
 
     private JSONArray getContracts() throws Exception {
-        String sql = "select id,ownerId,customItem213__c,entityType,comment__c,customItem148__c__c,customItem166__c__c,accountId__c,customItem206__c,customItem74__c,customItem209__c,customItem211__c,customItem205__c,customItem89__c,customItem215__c,customItem212__c from customEntity62__c where customItem47__c='归档' and customItem202__c__c=0 and (customItem204__c<>1 or customItem204__c is null)";
+        String sql = "select id,ownerId,customItem213__c,entityType,comment__c,customItem148__c__c,customItem166__c__c,accountId__c,customItem206__c,customItem74__c,customItem209__c,customItem211__c,customItem205__c,customItem89__c,customItem215__c,customItem212__c,customItem94__c from customEntity62__c where customItem47__c='归档' and customItem202__c__c=0 and (customItem204__c<>1 or customItem204__c is null)";
         String bySql = queryServer.getBySql(sql);
         JSONArray all = queryServer.findAll(getToken(), bySql, sql);
         return all;
