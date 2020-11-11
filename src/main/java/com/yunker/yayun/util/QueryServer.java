@@ -756,4 +756,14 @@ public class QueryServer extends ReturnPublic {
         }
         return priceBookId;
     }
+
+    public void takeEffectOrder(Long orderId) throws Exception {
+        String post = httpClientUtil.patch(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/order/actions/activation?recordId="+orderId, null);
+        System.out.println("生效订单 ========> " + post);
+    }
+
+    public void deactivationOrder(Long id) throws Exception {
+        String patch = httpClientUtil.patch(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/order/actions/deactivation?recordId=" + id, null);
+        System.out.println("取消生效订单："+patch);
+    }
 }

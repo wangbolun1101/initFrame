@@ -57,6 +57,7 @@ public class SyncService extends CommonController {
     private String pswd="Crm123456";//密码
     private String config="LIVE_HXSW";//密码
 
+
     /**
      * 同步条款、资信额度
      */
