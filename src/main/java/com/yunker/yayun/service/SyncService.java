@@ -58,82 +58,82 @@ public class SyncService extends CommonController {
     private String config="LIVE_HXSW";//密码
 
 
-    /**
-     * 同步条款、资信额度
-     */
-    @Scheduled(cron = "0 0/5 * * * ? ")
-    public void syncAccount2(){
-        try {
-            System.out.println("同步条款、资信额度--同步开始");
-            ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--同步开始");
-            String CRMtoken = getToken();
-            //调用接口,获取Sessiontoken
-            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
-            String sql="select id,customItem201__c,customItem204__c,customItem206__c from account where customItem201__c is not null and customItem232__c = 2";
-            Map map=new HashMap();
-            map.put("xoql",sql);
-            String post = httpClientUtil.post(CRMtoken, "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
-            System.out.println("同步条款、资信额度--查询数据："+post);
-            ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--查询数据："+post);
-            JSONObject object = JSONObject.parseObject(post);
-            JSONArray jsonArray = object.getJSONObject("data").getJSONArray("records");
-            if (jsonArray.size()<1){
-                return;
-            }
-            for (int i = 0; i < jsonArray.size(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                long accountId = jsonObject.getLongValue("id");
-                String CustNum = jsonObject.getString("customItem201__c");
-                if (StringUtils.isBlank(CustNum)){
-                    continue;
-                }
-                String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "CreditLimit,TermsCode", "CustNum = '"+CustNum+"' and CustSeq='0'", "CustNum DESC", "", -1);
-                System.out.println("同步条款、资信额度--ERP查询结果："+result);
-                ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--ERP查询结果："+result);
-                JSONObject resultJson = JSONObject.parseObject(result);
-                JSONArray Items = resultJson.getJSONArray("Items");
-                if (Items.size()<1){
-                    continue;
-                }
-                JSONObject jsonObject1 = Items.getJSONObject(0);
-                String ID = jsonObject1.getString("ID");
-
-                Float CreditLimit =getFloatData(jsonObject,"customItem204__c");//信用额度
-                String TermsCode =getData(jsonObject,"customItem206__c");//条款
-                JSONObject excute2 = super.provisionJson;
-                TermsCode=excute2.getString(TermsCode);
-                JSONObject dataObject=new JSONObject();
-                BigDecimal bigDecimal = new BigDecimal(CreditLimit + "");
-                dataObject.put("CreditLimit",bigDecimal.doubleValue());
-                dataObject.put("TermsCode",TermsCode);
-
-                JSONArray jsonArray1 = JSONArray.parseArray("[\"CreditLimit\",\"TermsCode\"]");
-                String [] dataArray= jsonArray1.toArray(new String[0]);
-                JSONArray allItems=new JSONArray();
-                JSONArray items = getItems(dataObject, dataArray, jsonArray1);
-                allItems.add(items);
-
-
-
-                String slCustomers = updateData(ERPtoken, "SLCustomers", allItems, jsonArray1,ID);//更新客户
-                System.out.println("同步条款、资信额度--ERP更新结果："+slCustomers);
-                ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--ERP更新结果："+slCustomers);
-
-                //更新CRM客户
-                JSONObject jsonObject2=new JSONObject();
-                jsonObject2.put("id",accountId);
-                jsonObject2.put("customItem232__c",1);
-                String post1 = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/account/update", jsonObject2.toString());
-            }
-
-            System.out.println("同步条款、资信额度--同步结束");
-            ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--同步结束");
-        }catch (Exception e){
-            e.printStackTrace();
-            System.err.println(e.getMessage());
-            ModuleOutputLogger.autoSyncCreditError.error(e.getMessage());
-        }
-    }
+//    /**
+//     * 同步条款、资信额度
+//     */
+//    @Scheduled(cron = "0 0/5 * * * ? ")
+//    public void syncAccount2(){
+//        try {
+//            System.out.println("同步条款、资信额度--同步开始");
+//            ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--同步开始");
+//            String CRMtoken = getToken();
+//            //调用接口,获取Sessiontoken
+//            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+//            String sql="select id,customItem201__c,customItem204__c,customItem206__c from account where customItem201__c is not null and customItem232__c = 2";
+//            Map map=new HashMap();
+//            map.put("xoql",sql);
+//            String post = httpClientUtil.post(CRMtoken, "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
+//            System.out.println("同步条款、资信额度--查询数据："+post);
+//            ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--查询数据："+post);
+//            JSONObject object = JSONObject.parseObject(post);
+//            JSONArray jsonArray = object.getJSONObject("data").getJSONArray("records");
+//            if (jsonArray.size()<1){
+//                return;
+//            }
+//            for (int i = 0; i < jsonArray.size(); i++) {
+//                JSONObject jsonObject = jsonArray.getJSONObject(i);
+//                long accountId = jsonObject.getLongValue("id");
+//                String CustNum = jsonObject.getString("customItem201__c");
+//                if (StringUtils.isBlank(CustNum)){
+//                    continue;
+//                }
+//                String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "CreditLimit,TermsCode", "CustNum = '"+CustNum+"' and CustSeq='0'", "CustNum DESC", "", -1);
+//                System.out.println("同步条款、资信额度--ERP查询结果："+result);
+//                ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--ERP查询结果："+result);
+//                JSONObject resultJson = JSONObject.parseObject(result);
+//                JSONArray Items = resultJson.getJSONArray("Items");
+//                if (Items.size()<1){
+//                    continue;
+//                }
+//                JSONObject jsonObject1 = Items.getJSONObject(0);
+//                String ID = jsonObject1.getString("ID");
+//
+//                Float CreditLimit =getFloatData(jsonObject,"customItem204__c");//信用额度
+//                String TermsCode =getData(jsonObject,"customItem206__c");//条款
+//                JSONObject excute2 = super.provisionJson;
+//                TermsCode=excute2.getString(TermsCode);
+//                JSONObject dataObject=new JSONObject();
+//                BigDecimal bigDecimal = new BigDecimal(CreditLimit + "");
+//                dataObject.put("CreditLimit",bigDecimal.doubleValue());
+//                dataObject.put("TermsCode",TermsCode);
+//
+//                JSONArray jsonArray1 = JSONArray.parseArray("[\"CreditLimit\",\"TermsCode\"]");
+//                String [] dataArray= jsonArray1.toArray(new String[0]);
+//                JSONArray allItems=new JSONArray();
+//                JSONArray items = getItems(dataObject, dataArray, jsonArray1);
+//                allItems.add(items);
+//
+//
+//                String slCustomers = updateData(ERPtoken, "SLCustomers", allItems, jsonArray1,ID);//更新客户
+//                System.out.println("同步条款、资信额度--ERP更新结果："+slCustomers);
+//                ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--ERP更新结果："+slCustomers);
+//
+//
+//                //更新CRM客户
+//                JSONObject jsonObject2=new JSONObject();
+//                jsonObject2.put("id",accountId);
+//                jsonObject2.put("customItem232__c",1);
+//                String post1 = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/account/update", jsonObject2.toString());
+//            }
+//
+//            System.out.println("同步条款、资信额度--同步结束");
+//            ModuleOutputLogger.autoSyncCredit.info("同步条款、资信额度--同步结束");
+//        }catch (Exception e){
+//            e.printStackTrace();
+//            System.err.println(e.getMessage());
+//            ModuleOutputLogger.autoSyncCreditError.error(e.getMessage());
+//        }
+//    }
 
     @Scheduled(cron = "0 0/5 * * * ? ")
     public void syncAccount1(){

@@ -3,6 +3,7 @@ package com.yunker.yayun.service;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.sun.javafx.sg.prism.web.NGWebView;
 import com.yunker.yayun.controller.CommonController;
 import com.yunker.yayun.oaPackage.*;
 import com.yunker.yayun.util.*;
@@ -80,11 +81,16 @@ public class SyncOtherService extends CommonController {
         return token;
     }
 
+    @Scheduled(cron = "0 0/5 * * * ? ")
+    public void approve() throws Exception {
+        syncOrderWhenOverApprove();
+        updateCreditWhenApprove();
+    }
+
 
     /**
      * 超频超期审批通过后，将关联订单生效并同步到ERP
      */
-    @Scheduled(cron = "0 0/5 * * * ? ")
     public void syncOrderWhenOverApprove() throws Exception {
         String sql="select id,customItem35__c from customEntity28__c where customItem47__c='归档' and customItem37__c =0 and customItem35__c is not null";
         String bySql = queryServer.getBySql(sql);
@@ -92,8 +98,51 @@ public class SyncOtherService extends CommonController {
         for (int i = 0; i < all.size(); i++) {
             JSONObject jsonObject = all.getJSONObject(i);
             Long orderId = jsonObject.getLong("customItem35__c");
+            JSONObject orderObject = new JSONObject();
+            orderObject.put("id", orderId);
+            orderObject.put("customItem224__c", true);
+            String s = queryServer.updateOrder(orderObject);
+            log.info("更新超期超额审批状态 ======> "+s);
             //生效订单
             queryServer.takeEffectOrder(orderId);
+        }
+    }
+
+    /**
+     * 赊销条款（账期）审批通过后，修改账套事业部账期条款及资信额度
+     */
+    public void updateCreditWhenApprove() throws Exception {
+        String sql="select id,customItem38__c,customItem11__c,customItem19__c,customItem36__c,customItem37__c,customItem42__c from customEntity29__c where customItem47__c='归档' and customItem48__c = true and customItem38__c is not null";
+        String bySql = queryServer.getBySql(sql);
+        JSONArray all = queryServer.findAll(getToken(), bySql, sql);
+        for (int i = 0; i < all.size(); i++) {
+            JSONObject jsonObject = all.getJSONObject(i);
+            Long customItem38__c = jsonObject.getLong("customItem38__c");//原账套事业部账期
+            Long customItem11__c = jsonObject.getLong("customItem11__c");//客户
+            Long customItem42__c = jsonObject.getLong("customItem42__c");//新账期
+            Long customItem36__c = jsonObject.getLong("customItem36__c");//事业部
+            Long customItem37__c = jsonObject.getLong("customItem37__c");//ERP客户账套
+            Double customItem19__c = jsonObject.getDouble("customItem19__c");//客户新赊销账额
+            if (customItem38__c!=null&&customItem38__c!=0){
+                JSONObject Object = new JSONObject();
+                Object.put("id", customItem38__c);
+                Object.put("customItem3__c", customItem19__c);
+                Object.put("customItem8__c", customItem42__c);
+                try {
+                    queryServer.updateCustomizeById(Object);
+                } catch (Exception e) {
+                    log.info("更新超期超额审批状态 ======> "+e.getMessage());
+                }
+            }else {
+                JSONObject object = new JSONObject();
+                object.put("entityType", 1214917399855445L);
+                object.put("customItem3__c", customItem19__c);
+                object.put("customItem6__c", customItem36__c);
+                object.put("customItem8__c", customItem42__c);
+                object.put("customItem9__c", customItem11__c);
+                object.put("customItem13__c", customItem37__c);
+                queryServer.createCustomize(object, 1214918522061203L);
+            }
         }
     }
 
@@ -102,7 +151,8 @@ public class SyncOtherService extends CommonController {
     @Scheduled(cron = "0 0/5 * * * ?")
 //    @Scheduled(cron = "0/5 * * * * ?")
     public void updateOrderOverDate(){
-        String sql="select id,customItem186__c,customItem222__c,customItem223__c,amount from _order where customItem205__c is null and customItem206__c is null and customItem207__c is null and customItem208__c is null";
+//        String sql="select id,customItem186__c,customItem222__c,TermsCode__c,amount,customItem213__c from _order";
+        String sql="select id,customItem186__c,customItem222__c,TermsCode__c,amount from _order where customItem205__c is null and customItem206__c is null and customItem207__c is null and customItem208__c is null";
         try {
             String bySql = queryServer.getBySql(sql);
             JSONArray all = queryServer.findAll(getToken(), bySql, sql);
@@ -111,12 +161,13 @@ public class SyncOtherService extends CommonController {
                 Long id = jsonObject.getLong("id");
                 String custnum = jsonObject.getString("customItem186__c");//客户编号
                 String bu = jsonObject.getString("customItem222__c");//事业部编号
-                String customItem223__c = jsonObject.getString("customItem223__c");//条款
+                String customItem223__c = jsonObject.getString("TermsCode__c");//条款
+                String customItem213__c = jsonObject.getString("customItem213__c");//账套
                 String string = provisionJson.getString(customItem223__c);
                 string=StringUtils.isBlank(string)?"":string;
                 String term =string;
                 Double uf_overlimit3 = jsonObject.getDouble("amount");//金额
-                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, customItem213__c);
                 Holder<String> pa = new Holder<>("<Parameters><Parameter>" + custnum + "</Parameter>" +
                         "<Parameter>" + bu + "</Parameter>" +
                         "<Parameter>" + term + "</Parameter>" +
@@ -828,7 +879,7 @@ public class SyncOtherService extends CommonController {
                 orderJSON.put("customItem216__c",customItem213__c);
 
                 try {
-                    String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+                    String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, customItem89__c);
                     Holder<String> pa = new Holder<>("<Parameters><Parameter>" + custnum + "</Parameter>" +
                             "<Parameter>" + bu + "</Parameter>" +
                             "<Parameter>" + term + "</Parameter>" +
@@ -1050,7 +1101,7 @@ public class SyncOtherService extends CommonController {
             JSONArray errorArray = new JSONArray();
             JSONArray detailArray = new JSONArray();
             //language=SQL
-            String sql = "select id,customItem176__c,customItem192__c,customItem212__c,customItem213__c,customItem214__c,createdAt,customItem182__c,customItem186__c,customItem210__c,TermsCode__c,customItem193__c,comment,customItem194__c,customItem211__c,customItem196__c,customItem197__c,customItem198__c,customItem199__c,customItem202__c,customItem200__c,customItem218__c,customItem191__c,customItem222__c,amount,accountId from _order where (customItem201__c<>'同步成功' or customItem201__c is null or customItem201__c='') and poStatus=2 AND createdAt>1594051200000";
+            String sql = "select id,customItem176__c,customItem192__c,customItem212__c,customItem213__c,customItem214__c,createdAt,customItem182__c,customItem186__c,customItem210__c,TermsCode__c,customItem193__c,comment,customItem194__c,customItem211__c,customItem196__c,customItem197__c,customItem198__c,customItem199__c,customItem202__c,customItem200__c,customItem218__c,customItem191__c,customItem222__c,amount,accountId,customItem224__c from _order where (customItem201__c<>'同步成功' or customItem201__c is null or customItem201__c='') and poStatus=2 AND createdAt>1594051200000";
             String bySql = queryServer.getBySql(sql);
             JSONArray all = queryServer.findAll(getToken(), bySql, sql);
             if (all.size()==0){
@@ -1059,15 +1110,18 @@ public class SyncOtherService extends CommonController {
             }
             for (int i = 0; i < all.size(); i++) {
                 JSONObject jsonObject = all.getJSONObject(i);
-                String customItem12__c = jsonObject.getString("customItem12__c");//账套
+                String customItem213__c = jsonObject.getString("customItem213__c");//账套
                 Long id = jsonObject.getLong("id");
                 Long accountId = jsonObject.getLong("accountId");//客户id
                 String custnum = jsonObject.getString("customItem186__c");//客户编号
                 String term = jsonObject.getString("TermsCode__c");//条款
                 String bu = jsonObject.getString("customItem222__c");//事业部编号
                 Double uf_overlimit3 = jsonObject.getDouble("amount");//金额
+                Boolean customItem224__c = jsonObject.getBoolean("customItem224__c");//超期超频是否审批通过
+                customItem224__c = customItem224__c==null?false:customItem224__c;
+
                 //查询该客户其他未生效订单金额
-                String orderAmountSql = "select id,amount from _order accountId = "+accountId+" and id<> and (customItem201__c<>'同步成功' or customItem201__c is null or customItem201__c='') and poStatus=1"+id+" limit 0,300";
+                String orderAmountSql = "select id,amount from _order where accountId = "+accountId+" and id<>"+id+" and (customItem201__c<>'同步成功' or customItem201__c is null or customItem201__c='') and poStatus=1 limit 0,300";
                 String bySql1 = queryServer.getBySql(orderAmountSql);
                 JSONObject object = JSONObject.parseObject(bySql1);
                 JSONArray records = object.getJSONArray("records");
@@ -1076,7 +1130,7 @@ public class SyncOtherService extends CommonController {
                     uf_overlimit3 += jsonObject1.getDouble("amount");
                 }
 
-                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, customItem12__c);
+                String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, customItem213__c);
                 Holder<String> pa = new Holder<>("<Parameters><Parameter>" + custnum + "</Parameter>" +
                         "<Parameter>" + bu + "</Parameter>" +
                         "<Parameter>" + term + "</Parameter>" +
@@ -1097,16 +1151,20 @@ public class SyncOtherService extends CommonController {
                 }
                 if (!"C00".equals(term)&&!"现结".equals(term)&&!"现款".equals(term)){
                     if (uf_overlimit==null||uf_overterm==null||Uf_overdate==null||Uf_overdateamount==null||uf_overlimit<0||uf_overterm>0||Uf_overdate>0||Uf_overdateamount>0){
-                        all.remove(jsonObject);
-                        i--;
-                        queryServer.deactivationOrder(id);
+                        if (!customItem224__c) {
+                            all.remove(jsonObject);
+                            i--;
+                            queryServer.deactivationOrder(id);
+                        }
                         JSONObject orderJSON = new JSONObject();
                         orderJSON.put("customItem205__c", uf_overlimit);
                         orderJSON.put("customItem206__c", uf_overterm.intValue());
                         orderJSON.put("customItem207__c", Uf_overdate.intValue());
                         orderJSON.put("customItem208__c", Uf_overdateamount);
                         orderJSON.put("id", id);
-                        orderJSON.put("customItem201__c", "超期超频无法生效同步");
+                        if (!customItem224__c){
+                            orderJSON.put("customItem201__c", "超期超频无法生效同步");
+                        }
                         queryServer.updateOrder(orderJSON);
                         for (int j = 0; j < records.size(); j++) {
                             JSONObject jsonObject1 = records.getJSONObject(j);
@@ -1122,16 +1180,20 @@ public class SyncOtherService extends CommonController {
                     }
                 }else {
                     if (Uf_overdate==null||Uf_overdateamount==null||Uf_overdate>0||Uf_overdateamount>0){
-                        all.remove(jsonObject);
-                        i--;
-                        queryServer.deactivationOrder(id);
+                        if (!customItem224__c) {
+                            all.remove(jsonObject);
+                            i--;
+                            queryServer.deactivationOrder(id);
+                        }
                         JSONObject orderJSON = new JSONObject();
                         orderJSON.put("customItem205__c", uf_overlimit);
                         orderJSON.put("customItem206__c", uf_overterm.intValue());
                         orderJSON.put("customItem207__c", Uf_overdate.intValue());
                         orderJSON.put("customItem208__c", Uf_overdateamount);
                         orderJSON.put("id", id);
-                        orderJSON.put("customItem201__c", "超期超频无法生效同步");
+                        if (!customItem224__c) {
+                            orderJSON.put("customItem201__c", "超期超频无法生效同步");
+                        }
                         queryServer.updateOrder(orderJSON);
                         for (int j = 0; j < records.size(); j++) {
                             JSONObject jsonObject1 = records.getJSONObject(j);
@@ -1409,6 +1471,29 @@ public class SyncOtherService extends CommonController {
                         String customItem192__c1 = jsonObject1.getString("customItem192__c");//分包标志
                         String customItem186__c1 = jsonObject1.getString("customItem186__c");//计量单位
                         String customItem193__c_1 = jsonObject1.getString("customItem193__c");//物料说明
+
+
+                        String bz_customItem219__c = jsonObject1.getString("customItem219__c");//外包规格1
+                        String bz_customItem207__c = jsonObject1.getString("customItem207__c");//外包模板1
+                        String bz_customItem215__c = jsonObject1.getString("customItem215__c");//外包装数1
+                        String bz_customItem225__c = jsonObject1.getString("customItem225__c");//外包装小计1
+                        String bz_customItem220__c = jsonObject1.getString("customItem220__c");//外包规格2
+                        String bz_customItem208__c = jsonObject1.getString("customItem208__c");//外包模板2
+                        String bz_customItem216__c = jsonObject1.getString("customItem216__c");//外包装数2
+                        String bz_customItem226__c = jsonObject1.getString("customItem226__c");//外包装小计2
+                        String bz_customItem218__c = jsonObject1.getString("customItem218__c");//内包规格
+                        String bz_customItem204__c = jsonObject1.getString("customItem204__c");//内包模板
+                        String bz_customItem214__c = jsonObject1.getString("customItem214__c");//内包装数
+                        String bz_customItem227__c = jsonObject1.getString("customItem227__c");//内包装小计1
+                        String bz_customItem221__c = jsonObject1.getString("customItem221__c");//标签规格1
+                        String bz_customItem209__c = jsonObject1.getString("customItem209__c");//标签模板1
+                        String bz_customItem223__c = jsonObject1.getString("customItem223__c");//标签装数1
+                        String bz_customItem228__c = jsonObject1.getString("customItem228__c");//标签小计1
+                        String bz_customItem222__c = jsonObject1.getString("customItem222__c");//标签规格2
+                        String bz_customItem217__c = jsonObject1.getString("customItem217__c");//标签模板2
+                        String bz_customItem224__c = jsonObject1.getString("customItem224__c");//标签装数2
+                        String bz_customItem229__c = jsonObject1.getString("customItem229__c");//标签小计2
+
                         int customItem192__c1_int = StringUtils.isBlank(customItem192__c1) ? 0 : Integer.valueOf(customItem192__c1);
                         //校验批次是否存在
                         if (StringUtils.isNotBlank(customItem191__c1)){
@@ -1478,6 +1563,119 @@ public class SyncOtherService extends CommonController {
                         try {
                             slCoitems = addData(ERPtoken, "SLCoitems", allItems1, propertyList1);
                             if (slCoitems == null) {
+
+
+                                //创建包装
+                                JSONArray dataArray = new JSONArray();
+                                int Sequence =0;
+                                if (StringUtils.isNotBlank(bz_customItem207__c)){
+                                    Sequence++;
+                                    JSONObject dataObject1 = new JSONObject();
+                                    dataObject1.put("Sequence", Sequence);//顺序
+//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
+//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+                                    dataObject1.put("specific", bz_customItem219__c);//规格
+                                    dataObject1.put("pt_num", bz_customItem207__c);//包装模板号
+                                    dataObject1.put("matl_qty", quantity);//内容量
+                                    dataObject1.put("qty_package", bz_customItem215__c);//包装数
+                                    dataObject1.put("DerSubTotal", bz_customItem225__c);//小计
+                                    dataArray.add(dataObject1);
+                                }
+                                if (StringUtils.isNotBlank(bz_customItem208__c)){
+                                    // bz_customItem220__c 外包规格2
+                                    // bz_customItem208__c 外包模板2
+                                    // bz_customItem216__c 外包装数2
+                                    // bz_customItem226__c 外包装小计2
+                                    Sequence++;
+                                    JSONObject dataObject1 = new JSONObject();
+                                    dataObject1.put("Sequence", Sequence);//顺序
+//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
+//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+                                    dataObject1.put("specific", bz_customItem220__c);//规格
+                                    dataObject1.put("pt_num", bz_customItem208__c);//包装模板号
+                                    dataObject1.put("matl_qty", quantity);//内容量
+                                    dataObject1.put("qty_package", bz_customItem216__c);//包装数
+                                    dataObject1.put("DerSubTotal", bz_customItem226__c);//小计
+                                    dataArray.add(dataObject1);
+                                }
+                                if (StringUtils.isNotBlank(bz_customItem204__c)){
+
+                                    // bz_customItem218__c //内包规格
+                                    // bz_customItem204__c //内包模板
+                                    // bz_customItem214__c //内包装数
+                                    // bz_customItem227__c //内包装小计1
+                                    Sequence++;
+                                    JSONObject dataObject1 = new JSONObject();
+                                    dataObject1.put("Sequence", Sequence);//顺序
+//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
+//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+                                    dataObject1.put("specific", bz_customItem218__c);//规格
+                                    dataObject1.put("pt_num", bz_customItem204__c);//包装模板号
+                                    dataObject1.put("matl_qty", quantity);//内容量
+                                    dataObject1.put("qty_package", bz_customItem214__c);//包装数
+                                    dataObject1.put("DerSubTotal", bz_customItem227__c);//小计
+                                    dataArray.add(dataObject1);
+                                }
+                                if (StringUtils.isNotBlank(bz_customItem209__c)){
+
+                                    // bz_customItem221__c //标签规格1
+                                    // bz_customItem209__c //标签模板1
+                                    // bz_customItem223__c //标签装数1
+                                    // bz_customItem228__c //标签小计1
+                                    Sequence++;
+                                    JSONObject dataObject1 = new JSONObject();
+                                    dataObject1.put("Sequence", Sequence);//顺序
+//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
+//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+                                    dataObject1.put("specific", bz_customItem221__c);//规格
+                                    dataObject1.put("pt_num", bz_customItem209__c);//包装模板号
+                                    dataObject1.put("matl_qty", quantity);//内容量
+                                    dataObject1.put("qty_package", bz_customItem223__c);//包装数
+                                    dataObject1.put("DerSubTotal", bz_customItem228__c);//小计
+                                    dataArray.add(dataObject1);
+                                }
+                                if (StringUtils.isNotBlank(bz_customItem217__c)){
+
+                                    // bz_customItem222__c //标签规格2
+                                    // bz_customItem217__c //标签模板2
+                                    // bz_customItem224__c //标签装数2
+                                    // bz_customItem229__c //标签小计2
+                                    Sequence++;
+                                    JSONObject dataObject1 = new JSONObject();
+                                    dataObject1.put("Sequence", Sequence);//顺序
+//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
+//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+                                    dataObject1.put("specific", bz_customItem222__c);//规格
+                                    dataObject1.put("pt_num", bz_customItem217__c);//包装模板号
+                                    dataObject1.put("matl_qty", quantity);//内容量
+                                    dataObject1.put("qty_package", bz_customItem224__c);//包装数
+                                    dataObject1.put("DerSubTotal", bz_customItem229__c);//小计
+                                    dataArray.add(dataObject1);
+
+                                    if (dataArray.size()>0){
+                                        JSONArray allItems_bz = getAllItems(dataArray);
+                                        JSONArray propertyList_bz = getPropertyList(dataArray.getJSONObject(0));
+//                                    String hxCoitemPacages = addData(ERPtoken, "HXCoitemPacages", allItems_bz, propertyList_bz);
+//                                    log.info("同步包装信息:"+hxCoitemPacages);
+                                    }
+                                }
+
+
                                 JSONObject object1 = new JSONObject();
                                 object1.put("id", id);
                                 object1.put("customItem190__c", "已同步");
@@ -1705,7 +1903,7 @@ public class SyncOtherService extends CommonController {
                                 dataObject.put("matl_qty", quantity);//内容量
                                 dataObject.put("qty_package", bz_customItem215__c);//包装数
                                 dataObject.put("DerSubTotal", bz_customItem225__c);//小计
-                                dataArray.add(dataArray);
+                                dataArray.add(dataObject);
                             }
                             if (StringUtils.isNotBlank(bz_customItem208__c)){
                                 // bz_customItem220__c 外包规格2
@@ -1725,7 +1923,7 @@ public class SyncOtherService extends CommonController {
                                 dataObject.put("matl_qty", quantity);//内容量
                                 dataObject.put("qty_package", bz_customItem216__c);//包装数
                                 dataObject.put("DerSubTotal", bz_customItem226__c);//小计
-                                dataArray.add(dataArray);
+                                dataArray.add(dataObject);
                             }
                             if (StringUtils.isNotBlank(bz_customItem204__c)){
 
@@ -1746,7 +1944,7 @@ public class SyncOtherService extends CommonController {
                                 dataObject.put("matl_qty", quantity);//内容量
                                 dataObject.put("qty_package", bz_customItem214__c);//包装数
                                 dataObject.put("DerSubTotal", bz_customItem227__c);//小计
-                                dataArray.add(dataArray);
+                                dataArray.add(dataObject);
                             }
                             if (StringUtils.isNotBlank(bz_customItem209__c)){
 
@@ -1767,7 +1965,7 @@ public class SyncOtherService extends CommonController {
                                 dataObject.put("matl_qty", quantity);//内容量
                                 dataObject.put("qty_package", bz_customItem223__c);//包装数
                                 dataObject.put("DerSubTotal", bz_customItem228__c);//小计
-                                dataArray.add(dataArray);
+                                dataArray.add(dataObject);
                             }
                             if (StringUtils.isNotBlank(bz_customItem217__c)){
 
@@ -1788,13 +1986,13 @@ public class SyncOtherService extends CommonController {
                                 dataObject.put("matl_qty", quantity);//内容量
                                 dataObject.put("qty_package", bz_customItem224__c);//包装数
                                 dataObject.put("DerSubTotal", bz_customItem229__c);//小计
-                                dataArray.add(dataArray);
+                                dataArray.add(dataObject);
 
                                 if (dataArray.size()>0){
                                     JSONArray allItems_bz = getAllItems(dataArray);
                                     JSONArray propertyList_bz = getPropertyList(dataArray.getJSONObject(0));
-                                    String hxCoitemPacages = addData(ERPtoken, "HXCoitemPacages", allItems_bz, propertyList_bz);
-                                    log.info("同步包装信息:"+hxCoitemPacages);
+//                                    String hxCoitemPacages = addData(ERPtoken, "HXCoitemPacages", allItems_bz, propertyList_bz);
+//                                    log.info("同步包装信息:"+hxCoitemPacages);
                                 }
                             }
 
@@ -1844,7 +2042,7 @@ public class SyncOtherService extends CommonController {
 
     private Map<Long, JSONArray> getOrderProductInfo(String ids) throws Exception {
         Map<Long, JSONArray> map = new HashMap<>();
-        String sqlPrefix = "select id,orderId,customItem182__c,customItem183__c,unitPrice,quantity,discount,customItem184__c,customItem185__c,priceTotal,comment,customItem191__c,customItem192__c,customItem193__c,customItem186__c, from orderProduct where orderId in(";
+        String sqlPrefix = "select id,orderId,customItem182__c,customItem183__c,unitPrice,quantity,discount,customItem184__c,customItem185__c,priceTotal,comment,customItem191__c,customItem192__c,customItem193__c,customItem186__c from orderProduct where orderId in(";
         String sqlsuffix = ")";
         JSONArray dataMoreIds = getDataMoreIds(ids, sqlPrefix, sqlsuffix);
         for (int i = 0; i < dataMoreIds.size(); i++) {
