@@ -928,8 +928,8 @@ public class SyncService extends CommonController {
         return ;
     }
 
-    @Scheduled(cron = "0/5 * * * * ? ")
-//    @Scheduled(cron = "0 0/5 * * * ? ")
+//    @Scheduled(cron = "0/5 * * * * ? ")
+    @Scheduled(cron = "0 0/5 * * * ? ")
     public void syncBankAccount1(){
         Long BankId=0L;
         try{

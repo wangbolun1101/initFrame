@@ -282,6 +282,7 @@ public class SyncOtherService extends CommonController {
         JSONArray jsonArray = new JSONArray();
         try {
             HXCRMServicePortType hxcrmServiceHttpPort = new HXCRMServiceLocator().getHXCRMServiceHttpPort();
+
             //查询所有未归档oa同步审批数据
             try {
                 String sql="select id,customItem1__c,customItem2__c,customItem3__c,customItem5__c from customEntity48__c where customItem5__c is null or customItem5__c = false";
