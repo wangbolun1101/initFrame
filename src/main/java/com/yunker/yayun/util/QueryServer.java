@@ -749,8 +749,8 @@ public class QueryServer extends ReturnPublic {
         System.out.println("创建价格表 ========> " + post);
         try {
             JSONObject resultJson = JSONObject.parseObject(post);
-            resultJson = resultJson.getJSONObject("result");
-            priceBookId = resultJson.getLong("id");
+            JSONObject data = resultJson.getJSONObject("data");
+            priceBookId = data.getLong("id");
         } catch (Exception e) {
             e.printStackTrace();
         }

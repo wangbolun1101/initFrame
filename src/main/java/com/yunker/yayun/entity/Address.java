@@ -17,19 +17,15 @@ import org.jeecgframework.poi.excel.annotation.ExcelTarget;
 @ExcelTarget("Address")
 public class Address {
     @Excel(name = "客户编号")
-    public String accountNo;
-    @Excel(name = "erpid")
-    public String erpid;
-    @Excel(name = "详细地址[1]")
-    public String address1;
-    @Excel(name = "详细地址 [2]")
-    public String address2;
-    @Excel(name = "省/州")
-    public String province;
-    @Excel(name = "国家/地区")
-    public String country;
-    @Excel(name = "联系人")
-    public String contact;
-    @Excel(name = "电话")
-    public String phone;
+    public String khbh;
+    @Excel(name = "事业部")
+    public String syb;
+    @Excel(name = "信用额度")
+    public String xyed;
+    @Excel(name = "客户等级")
+    public String khdj;
+    @Excel(name = "条款")
+    public String tk;
+    @Excel(name = "事业部名称")
+    public String sybmc;
 }

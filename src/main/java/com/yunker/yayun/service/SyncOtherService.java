@@ -3,16 +3,16 @@ package com.yunker.yayun.service;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.sun.javafx.sg.prism.web.NGWebView;
 import com.yunker.yayun.controller.CommonController;
-import com.yunker.yayun.oaPackage.*;
+import com.yunker.yayun.oaPackage.AnyType2AnyTypeMapEntry;
+import com.yunker.yayun.oaPackage.HXCRMServiceLocator;
+import com.yunker.yayun.oaPackage.HXCRMServicePortType;
 import com.yunker.yayun.util.*;
 import lombok.extern.slf4j.Slf4j;
 import mypackage.IDOWebService;
 import mypackage.IDOWebServiceSoap;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -80,6 +80,9 @@ public class SyncOtherService extends CommonController {
         }
         return token;
     }
+
+
+
 
     @Scheduled(cron = "0 0/5 * * * ? ")
     public void approve() throws Exception {

@@ -15,7 +15,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.xml.ws.Holder;
-import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -929,7 +928,8 @@ public class SyncService extends CommonController {
         return ;
     }
 
-    @Scheduled(cron = "0 0/5 * * * ? ")
+    @Scheduled(cron = "0/5 * * * * ? ")
+//    @Scheduled(cron = "0 0/5 * * * ? ")
     public void syncBankAccount1(){
         Long BankId=0L;
         try{
