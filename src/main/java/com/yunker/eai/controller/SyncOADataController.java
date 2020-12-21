@@ -692,18 +692,6 @@ public class SyncOADataController extends CommonController{
                     if (accountId == null||accountId==0) {
                         accountAddArray.add(account);
                         accountMap.put(Name, 8888L);
-
-                        //todo 创建账套
-                        JSONObject erpObject = new JSONObject();
-                        erpObject.put("entityType", 1340810097181017L);
-                        erpObject.put("name", config);
-                        erpObject.put("customItem3__c", erpNo);
-                        erpObject.put("customItem4__c", accountId);
-                        Long aLong = ownerMap.get(accountId);
-                        erpObject.put("ownerId", aLong);
-                        erpObject.put("customItem2__c", CustNum);
-                        erpObject.put("customItem5__c", "同步成功");
-                        ERPArray.add(erpObject);
                     }else {
 //                        if (customItem193__c == false) {
 //
@@ -768,7 +756,7 @@ public class SyncOADataController extends CommonController{
                 }else {
                     //todo 根据客户编号匹配客户是否存在
                     //todo 存在，则根据是否正式客户判断是否需更新
-                     // todo 更新客户 在此基础上校验正式客户
+                    // todo 更新客户 在此基础上校验正式客户
 //                    if (customItem193__c == false) {
 //
 //                        //todo 根据客户id更新相应字段
@@ -801,36 +789,33 @@ public class SyncOADataController extends CommonController{
 //
 //                    }
 
-                    //判断账套是否存在
-//                    if (accountId != 8888L) {
-//                        Long erpId = ERPMap.get(accountId + "," + erpNo);
-//                        if (erpId == null || erpId == 0) {
-//                            //todo 创建账套
-//                            JSONObject erpObject = new JSONObject();
-//                            erpObject.put("entityType", 1340810097181017L);
-//                            erpObject.put("name", config);
-//                            erpObject.put("customItem3__c", erpNo);
-//                            erpObject.put("customItem4__c", accountId);
-//                            Long aLong = ownerMap.get(accountId);
-//                            erpObject.put("ownerId", aLong);
-//                            erpObject.put("customItem2__c", CustNum);
-//                            erpObject.put("customItem5__c", "同步成功");
-//                            ERPArray.add(erpObject);
-//                        } else {//忽略
-//                            String s = ERPMap1.get(erpId);
-//                            if (StringUtils.isBlank(s)) {
-//                                JSONObject erpObject = new JSONObject();
-//                                erpObject.put("id", erpId);
-//                                erpObject.put("customItem2__c", CustNum);
-//                                erpObject.put("customItem5__c", "同步成功");
-//                                ERPUpdateArray.add(erpObject);
-//                            }
-//                        }
-//                    }
+//                    判断账套是否存在
+                    if (accountId != 8888L) {
+                        Long erpId = ERPMap.get(accountId + "," + erpNo);
+                        if (erpId == null || erpId == 0) {
+                            //todo 创建账套
+                            JSONObject erpObject = new JSONObject();
+                            erpObject.put("entityType", 1340810097181017L);
+                            erpObject.put("name", config);
+                            erpObject.put("customItem3__c", erpNo);
+                            erpObject.put("customItem4__c", accountId);
+                            Long aLong = ownerMap.get(accountId);
+                            erpObject.put("ownerId", aLong);
+                            erpObject.put("customItem2__c", CustNum);
+                            erpObject.put("customItem5__c", "同步成功");
+                            ERPArray.add(erpObject);
+                        } else {//忽略
+                            String s = ERPMap1.get(erpId);
+                            if (StringUtils.isBlank(s)) {
+                                JSONObject erpObject = new JSONObject();
+                                erpObject.put("id", erpId);
+                                erpObject.put("customItem2__c", CustNum);
+                                erpObject.put("customItem5__c", "同步成功");
+                                ERPUpdateArray.add(erpObject);
+                            }
+                        }
+                    }
                 }
-
-
-
              }
         }
 
