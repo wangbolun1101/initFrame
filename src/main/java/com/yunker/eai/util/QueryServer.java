@@ -600,6 +600,14 @@ public class QueryServer extends ReturnPublic {
         }
     }
 
+    public Long createOrder(JSONObject orderJSON) throws Exception {
+        String token = getToken();
+        JSONObject object = new JSONObject();
+        object.put("record", orderJSON);
+        String result = httpClientUtil.post(token, "https://api.xiaoshouyi.com/data/v1/objects/order/create", object.toString());
+        Long id = JSONObject.parseObject(result).getLong("id");
+        return id;
+    }
 
     public Long createOrderTeatil(JSONObject orderDetailJSON) throws Exception {
 //        JSONObject record=new JSONObject();
@@ -646,14 +654,6 @@ public class QueryServer extends ReturnPublic {
         return fileName;
     }
 
-    public Long createOrder(JSONObject orderJSON) throws Exception {
-        String token = getToken();
-        JSONObject object = new JSONObject();
-        object.put("record", orderJSON);
-        String result = httpClientUtil.post(token, "https://api.xiaoshouyi.com/data/v1/objects/order/create", object.toString());
-        Long id = JSONObject.parseObject(result).getLong("id");
-        return id;
-    }
 
     public String createAccount(JSONObject accountJSON) throws Exception {
         JSONObject object = new JSONObject();
