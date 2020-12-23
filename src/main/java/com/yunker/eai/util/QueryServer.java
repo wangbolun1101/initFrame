@@ -600,14 +600,6 @@ public class QueryServer extends ReturnPublic {
         }
     }
 
-    public Long createOrder(JSONObject orderJSON) throws Exception {
-        String token = getToken();
-        JSONObject object = new JSONObject();
-        object.put("record", orderJSON);
-        String result = httpClientUtil.post(token, "https://api.xiaoshouyi.com/data/v1/objects/order/create", object.toString());
-        Long id = JSONObject.parseObject(result).getLong("id");
-        return id;
-    }
 
     public Long createOrderTeatil(JSONObject orderDetailJSON) throws Exception {
 //        JSONObject record=new JSONObject();
@@ -654,6 +646,23 @@ public class QueryServer extends ReturnPublic {
         return fileName;
     }
 
+    public Long createOrder(JSONObject orderJSON) throws Exception {
+        String token = getToken();
+        JSONObject object = new JSONObject();
+        object.put("record", orderJSON);
+        String result = httpClientUtil.post(token, "https://api.xiaoshouyi.com/data/v1/objects/order/create", object.toString());
+        Long id = JSONObject.parseObject(result).getLong("id");
+        return id;
+    }
+
+    public String createAccount(JSONObject accountJSON) throws Exception {
+        JSONObject object = new JSONObject();
+        object.put("public",false);
+        object.put("record",accountJSON);
+        String result = httpClientUtil.post(getToken(),"https://api.xiaoshouyi.com/data/v1/objects/account/create",accountJSON.toString());
+        String id = JSONObject.parseObject(result).getString("id");
+        return id;
+    }
 
 
     public String updateAccount(JSONObject object) throws Exception {
@@ -768,4 +777,16 @@ public class QueryServer extends ReturnPublic {
         String patch = httpClientUtil.patch(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/order/actions/deactivation?recordId=" + id, null);
         System.out.println("取消生效订单："+patch);
     }
+
+//    public Long createAccountBook(JSONObject abJSON) throws Exception {//创建账套
+//
+//        JSONObject object = new JSONObject();
+//        object.put("data",abJSON);
+//        String result = httpClientUtil.post(getToken(),"https://api.xiaoshouyi.com/rest/data/v2.0/xobjects/customEntity63__c",abJSON.toString());
+//        Long id = JSONObject.parseObject(result).getLong("id");
+//        return id;
+//    }
+
+
+
 }

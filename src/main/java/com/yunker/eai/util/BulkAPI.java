@@ -124,6 +124,7 @@ public class BulkAPI {
             JSONObject data = new JSONObject();
             status.put("status", 3);
             data.put("data", status);
+//            String patch = httpClientUtil.patch(getToken(), "https://api.xiaoshouyi.com/rest/bulk/v2/job/" + jobId, data.toJSONString());
             String patch = httpClientUtil.patch(getToken(), "https://api.xiaoshouyi.com/rest/bulk/v2/job/" + jobId, JSONObject.toJSONString(data,SerializerFeature.WriteMapNullValue));
             JSONObject object = JSONObject.parseObject(patch);
             if (!"200".equals(object.getString("code"))) {
@@ -202,6 +203,7 @@ public class BulkAPI {
      * 创建异步作业
      */
     public String createTask(JSONObject dateBulk) throws Exception {
+//        String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/bulk/v2/batch", dateBulk.toJSONString());
         String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/bulk/v2/batch", JSONObject.toJSONString(dateBulk,SerializerFeature.WriteMapNullValue));
 
         System.out.println(post);
