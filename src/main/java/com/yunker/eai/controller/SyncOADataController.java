@@ -859,36 +859,31 @@ public class SyncOADataController extends CommonController {
             }
         }
 
-//        if (accountAddArray.size() > 0) {
-//            bulkAPI.createDataTaskJob(accountAddArray, "account", "insert");
+        if (accountAddArray.size() > 0) {
+            bulkAPI.createDataTaskJob(accountAddArray, "account", "insert");
 ////            for (int i = 0; i <accountAddArray.size(); i++) {
 ////                JSONObject jsonObject = accountAddArray.getJSONObject(i);
 ////                String str = queryServer.createAccount(jsonObject);
 ////                System.out.println(str);
-////
-////
 ////            }
-//        }
+        }
 
-//        if (accountArray.size() > 0) {
-//            bulkAPI.createDataTaskJob(accountArray, "account", "update");
+        if (accountArray.size() > 0) {
+            bulkAPI.createDataTaskJob(accountArray, "account", "update");
 ////            for (int i = 0; i < accountArray.size(); i++) {
 ////                JSONObject jsonObject = accountArray.getJSONObject(i);
 ////                String s = queryServer.updateAccount(jsonObject);
 ////                System.out.println(s);
 ////            }
-//        }
+        }
 
 
         if (ERPArray.size() > 0) {
-            System.out.println("****************");
-//            bulkAPI.createDataTaskJob(ERPArray, "customEntity63__c", "insert");
+            bulkAPI.createDataTaskJob(ERPArray, "customEntity63__c", "insert");
 //            for (int i = 0; i < ERPArray.size(); i++) {
 //                JSONObject jsonObject = ERPArray.getJSONObject(i);
 //                Long l =queryServer.createCustomize(jsonObject,1340810097180997L,getToken());
 //                System.out.println(l);
-//
-//
 //            }
         }
 
