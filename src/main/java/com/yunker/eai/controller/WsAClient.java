@@ -89,13 +89,11 @@ public class WsAClient {
 
         //自定义方法调用（具体参数要问客户那边技术）（这个自定义接口是获取客户最新编号的接口）
 //        Holder<String> pa = new Holder<>("<Parameters><Parameter>SF</Parameter><Parameter ByRef=\"Y\"></Parameter></Parameters>");
-        Holder<String> pa = new Holder<>("<Parameters>" +
-                "<Parameter>" + "JSH0124" + "</Parameter>" +
+        Holder<String> pa = new Holder<>("<Parameters><Parameter>" + "JSH0124" + "</Parameter>" +
                 "<Parameter>"+"Y001"+"</Parameter>" +
                 "<Parameter>"+"E90"+"</Parameter>" +
                 "<Parameter>"+"120000"+"</Parameter>" +
-                "<Parameter ByRef=\"Y\"></Parameter>" +
-                "</Parameters>");
+                "<Parameter ByRef=\"Y\"></Parameter></Parameters>");
         Holder<Object> pa2 = new Holder<>();
         idoWebServiceSoap.callMethod(ERPtoken, "SP!", "hxsp_calc_ecocredit_crm", pa, pa2);
 //        //输出返回结果

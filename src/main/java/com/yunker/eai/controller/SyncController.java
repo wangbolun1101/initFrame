@@ -2,8 +2,8 @@ package com.yunker.eai.controller;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.yunker.eai.log.ModuleOutputLogger;
 import com.yunker.eai.util.HttpClientUtil;
+import com.yunker.eai.log.ModuleOutputLogger;
 import com.yunker.eai.util.QueryServer;
 import mypackage.IDOWebService;
 import mypackage.IDOWebServiceSoap;
@@ -804,7 +804,7 @@ public class SyncController extends CommonController{
            //调用接口,获取Sessiontoken
            String ERPtoken = idoWebServiceSoap.createSessionToken("crm", "Crm123456", "LIVE_HXSW");
 
-           String sql="select customItem1__c.customItem195__c,customItem1__c.customItem201__c,customItem4__c,customItem5__c,customItem6__c,customItem16__c,customItem15__c,customItem14__c,customItem9__c,customItem11__c from customEntity6__c where id="+bankId;
+           String sql="select customItem1__c.customItem195__c,customItem1__c.customItem201__c,customItem4__c,customItem5__c,customItem6__c,customItem21__c,customItem15__c,customItem14__c,customItem9__c,customItem11__c from customEntity6__c where id="+bankId;
            Map map=new HashMap();
            map.put("xoql",sql);
            String CRMResult = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
@@ -820,7 +820,7 @@ public class SyncController extends CommonController{
            String cusUf_Bank=getData(jsonObject,"customItem4__c");//开户行
             String country = getSplitData(jsonObject,"customItem1__c.customItem195__c");//国家
            String cusUf_BankAcct=getData(jsonObject,"customItem5__c");//银行账户
-           String cusUF_ReservedField1=getData(jsonObject,"customItem6__c");//纳税人识别号
+           String cusUF_ReservedField1=getData(jsonObject,"customItem21__c");//纳税人识别号
            String cusUf_Note=getData(jsonObject,"customItem16__c");//开票特殊要求
 //           String InvCategory=getArrayToData(jsonObject,"customItem15__c");//发票类别
            String InvCategory="DefaultCategory";//发票类别

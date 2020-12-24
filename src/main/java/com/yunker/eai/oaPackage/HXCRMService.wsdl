@@ -135,8 +135,8 @@
   </wsdl:binding>
   <wsdl:service name="HXCRMService">
     <wsdl:port name="HXCRMServiceHttpPort" binding="tns:HXCRMServiceHttpBinding">
-      <wsdlsoap:address location="http://10.10.0.251:8089/services/HXCRMService"/>
-<!--      <wsdlsoap:address location="http://bloomageoa.bloomagebiotech.com/services/HXCRMService"/>-->
+      <!--<wsdlsoap:address location="http://10.10.0.251:8089/services/HXCRMService"/>-->
+      <wsdlsoap:address location="http://bloomageoa.bloomagebiotech.com/services/HXCRMService"/>
     </wsdl:port>
   </wsdl:service>
 </wsdl:definitions>

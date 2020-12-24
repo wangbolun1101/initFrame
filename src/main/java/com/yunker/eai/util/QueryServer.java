@@ -410,7 +410,7 @@ public class QueryServer extends ReturnPublic {
         if(base64==null||"".equals(base64)) {
             return null;
         }
-        byte[] buff= org.apache.tomcat.util.codec.binary.Base64.decodeBase64(base64);
+        byte[] buff= Base64.decodeBase64(base64);
         File file=null;
         FileOutputStream fout=null;
         try {
@@ -730,6 +730,17 @@ public class QueryServer extends ReturnPublic {
         }
         return id;
     }
+
+    public void agreeApprove(Long approvalId) throws Exception {
+        String url = "https://api.xiaoshouyi.com/data/v1/objects/approval/agree";
+        JSONObject object = new JSONObject();
+        object.put("approvalId", approvalId);
+        object.put("approvalUserId", 0);
+        object.put("comments", "OA审批通过后，自动审批通过");
+        String post = httpClientUtil.post(getToken(), url, object.toJSONString());
+        System.out.println("OA审批通过后，自动审批通过 ========> " + post);
+    }
+
     public void notAgreeApprove(Long approvalId) throws Exception {
         String url = "https://api.xiaoshouyi.com/data/v1/objects/approval/refuse";
         JSONObject object = new JSONObject();

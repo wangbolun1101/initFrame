@@ -153,15 +153,17 @@ public class WorkFlowUtil {
             if (detail){//存在明细
                 /////////拼装 workflowDetailTableInfos  start//////////
                 List<WorkflowDetailTableInfo> workflowDetailTableInfos = new ArrayList<>();
+
+                /////////拼装 WorkflowDetailTableInfo  start//////////
+                WorkflowDetailTableInfo workflowDetailTableInfo=new WorkflowDetailTableInfo();
+
+                /////////拼装 workflowRequestTableRecords  start//////////
+                List<WorkflowRequestTableRecord> workflowRequestTableRecords = new ArrayList<>();
                 //循环拼接报文
                 for (int i = 0; i < detailData.size(); i++) {
-                    /////////拼装 WorkflowDetailTableInfo  start//////////
-                    WorkflowDetailTableInfo workflowDetailTableInfo=new WorkflowDetailTableInfo();
-                    /////////拼装 workflowRequestTableRecords  start//////////
-                    List<WorkflowRequestTableRecord> workflowRequestTableRecords = new ArrayList<>();
                     /////////拼装 WorkflowRequestTableRecord  start//////////
                     WorkflowRequestTableRecord workflowRequestTableRecord_detail = new WorkflowRequestTableRecord();
-                    workflowRequestTableRecord_detail.setRecordOrder(0);
+                    workflowRequestTableRecord_detail.setRecordOrder(i);
                     /////////拼装 workflowRequestTableFields  start//////////
                     List<WorkflowRequestTableField> workflowRequestTableFields_detail = new ArrayList<>();
                     JSONObject jsonObject = detailData.getJSONObject(i);
@@ -185,10 +187,10 @@ public class WorkFlowUtil {
                     workflowRequestTableRecords.add(workflowRequestTableRecord_detail);
                     /////////拼装 workflowRequestTableRecords  end//////////
 
-                    workflowDetailTableInfo.setWorkflowRequestTableRecords(workflowRequestTableRecords.toArray(new WorkflowRequestTableRecord[0]));
-                    /////////拼装 WorkflowDetailTableInfo  end//////////
-                    workflowDetailTableInfos.add(workflowDetailTableInfo);
-                }
+            }
+                workflowDetailTableInfo.setWorkflowRequestTableRecords(workflowRequestTableRecords.toArray(new WorkflowRequestTableRecord[0]));
+                /////////拼装 WorkflowDetailTableInfo  end//////////
+                workflowDetailTableInfos.add(workflowDetailTableInfo);
 
                 /////////拼装 workflowDetailTableInfos  start//////////
                 workflowRequestInfo.setWorkflowDetailTableInfos(workflowDetailTableInfos.toArray(new WorkflowDetailTableInfo[0]));
