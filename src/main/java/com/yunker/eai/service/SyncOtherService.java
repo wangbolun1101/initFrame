@@ -231,7 +231,7 @@ public class SyncOtherService extends CommonController {
         bulkAPI.createDataTaskJob(jsonArray, "account", "update");
     }
 
-    @Scheduled(cron = "0 0/5 * * * ?")
+    @Scheduled(cron = "0 1/5 * * * ?")
     public void getOrderProductStatus(){
         JSONArray jsonArray = new JSONArray();
         String sql="select id,customItem171__c,customItem172__c,customItem195__c,customItem183__c,customItem196__c from orderProduct where (customItem171__c is null or customItem172__c is null) and customItem195__c not like 'SO%'";
@@ -280,7 +280,7 @@ public class SyncOtherService extends CommonController {
 
     }
 
-    @Scheduled(cron = "0 0/5 * * * ?")
+    @Scheduled(cron = "0 2/5 * * * ?")
     public void getAOApproveStatus(){
         Map<String,JSONObject>map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
@@ -516,132 +516,12 @@ public class SyncOtherService extends CommonController {
         return map;
     }
 
-    /*
-     * @Description TODO 账户信息修改后同步到ERP
-     * @author lucg.
-     * @date 2020/12/23 16:17
-     */
-    @Scheduled(cron = "0 0/5 * * * ? ")
-    public void syncBankInfoUpdate(){
-        Long BankId=0L;
-        try{
-            System.out.println("更新账户信息--同步开始");
-            ModuleOutputLogger.autoSyncBankInfo.info("更新账户信息--同步开始");
-            Map<Long,String>statusMap = new HashMap<>();
-            //调用接口,获取Sessiontoken
-            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
-
-            String v1Sql="select id from customEntity6__c where customItem19__c<>'同步成功' or customItem19__c is null";
-            String bySql = queryServer.getBySql(v1Sql);
-            JSONArray all = queryServer.findAll(getToken(), bySql, v1Sql);
-            for (int i = 0; i < all.size(); i++) {
-                JSONObject jsonObject = all.getJSONObject(i);
-                Long id = jsonObject.getLong("id");
-                statusMap.put(id, "success");
-            }
-
-            String sql="select id,customItem1__c.customItem195__c,customItem1__c.customItem201__c,customItem4__c,customItem5__c,customItem21__c,customItem16__c,customItem15__c,customItem14__c,customItem9__c,customItem11__c,customItem7__c,customItem8__c from customEntity6__c where customItem19__c<>'同步成功' and customItem23__c = 1";
-            Map map=new HashMap();
-            map.put("xoql",sql);
-            String CRMResult = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/rest/data/v2.0/query/xoql", map);
-            System.out.println("更新账户信息--查询结果："+CRMResult);
-            ModuleOutputLogger.autoSyncBankInfo.info("更新账户信息--查询结果："+CRMResult);
-            JSONObject CRMObject = JSONObject.parseObject(CRMResult);
-            JSONArray CRMJsonArray = CRMObject.getJSONObject("data").getJSONArray("records");
-            if (CRMJsonArray.size()<1){
-                return;
-            }
-            for (int i = 0; i < CRMJsonArray.size(); i++) {
-                JSONObject jsonObject = CRMJsonArray.getJSONObject(i);
-
-                Long bankId = jsonObject.getLong("id");
-                if (StringUtils.isBlank(statusMap.get(bankId))){
-                    continue;
-                }
-                String CustNum = getData(jsonObject, "customItem1__c.customItem201__c");//客户编号
-                String country = getSplitData(jsonObject,"customItem1__c.customItem195__c");//国家
-                if (StringUtils.isBlank(CustNum)){
-                    continue;
-                }
-                BankId=bankId;
-
-                String cusUf_Bank=getData(jsonObject,"customItem4__c");//开户行
-                String cusUf_BankAcct=getData(jsonObject,"customItem5__c");//银行账户
-                String cusUF_ReservedField1=getData(jsonObject,"customItem21__c");//纳税人识别号
-                String cusUf_Note=getData(jsonObject,"customItem16__c");//开票特殊要求
-//           String InvCategory=getArrayToData(jsonObject,"customItem15__c");//发票类别
-                String InvCategory="DefaultCategory";//发票类别
-                String PayType=getArrayToData(jsonObject,"customItem14__c");//付款类型
-                String TaxCode1=getArrayToData(jsonObject,"customItem9__c");//税率
-                JSONObject excute2 = super.taxCodeJson;
-                TaxCode1=excute2.getString(TaxCode1);
-                if (StringUtils.isBlank(TaxCode1)){
-                    if ("CHN".equals(country)){
-                        TaxCode1="13";
-                    }else{
-                        TaxCode1="0";
-                    }
-                }
-                String BankCode=getArrayToData(jsonObject,"customItem11__c");//银行码
-                JSONObject excute1 = super.bankCodeJson;
-                BankCode=excute1.getString(BankCode);
-                if(StringUtils.isBlank(BankCode)){
-                    BankCode="BK1";
-                }
-                String Charfld3=getData(jsonObject,"customItem7__c");//开票电话 后加
-                String Charfld2=getData(jsonObject,"customItem8__c");//开票地址 后加
-
-
-
-                String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "cusUf_Bank,cusUf_BankAcct,cusUF_ReservedField1,cusUf_Note,InvCategory,PayType,TaxCode1,BankCode,Charfld3,Charfld2", "CustNum = '"+CustNum+"' and CustSeq='0'", "CustNum DESC", "", -1);
-                System.out.println("更新账户信息--ERP查询结果："+result);
-                ModuleOutputLogger.autoSyncBankInfo.info("更新账户信息--ERP查询结果："+result);
-                JSONObject resultJson = JSONObject.parseObject(result);
-                JSONArray Items = resultJson.getJSONArray("Items");
-                if (Items.size()<1){
-                    continue;
-                }
-                JSONObject object = super.payTypeJson;
-                JSONObject jsonObject1 = Items.getJSONObject(0);
-                String ID = jsonObject1.getString("ID");
-                JSONObject dataObject=new JSONObject();
-                dataObject.put("cusUf_Bank",cusUf_Bank);
-                dataObject.put("cusUf_BankAcct",cusUf_BankAcct);
-                dataObject.put("cusUF_ReservedField1",cusUF_ReservedField1);
-                dataObject.put("cusUf_Note",cusUf_Note);
-                dataObject.put("InvCategory",InvCategory);
-                dataObject.put("PayType",object.getString(PayType));
-                dataObject.put("TaxCode1",TaxCode1);
-                dataObject.put("BankCode",BankCode);
-                dataObject.put("Charfld3",Charfld3);
-                dataObject.put("Charfld2",Charfld2);
-
-                JSONArray allItems = getAllItems(dataObject);
-                JSONArray propertyList = getPropertyList(dataObject);
-
-                String slCustomers = updateData(ERPtoken, "SLCustomers", allItems, propertyList, ID);
-                System.out.println("更新账户信息--更新结果："+slCustomers);
-                ModuleOutputLogger.autoSyncBankInfo.info("更新账户信息--更新结果："+slCustomers);
-                JSONObject object1=new JSONObject();
-                object1.put("id",bankId);
-                object1.put("customItem23__c",false);
-                String post = httpClientUtil.post(getToken(), "https://api.xiaoshouyi.com/data/v1/objects/customize/update", object1.toString());
-            }
-            System.out.println("更新账户信息--同步结束");
-            ModuleOutputLogger.autoSyncBankInfo.info("更新账户信息--同步结束");
-
-        }catch (Exception e){
-            e.printStackTrace();
-            ModuleOutputLogger.autoSyncBankInfoError.error(e.getMessage());
-        }
-        return;
-    }
 
     /**
      * 客户修改后同步到ERP
      */
 //    @Scheduled(cron = "0/5 * * * * ?")
-    @Scheduled(cron = "0 0/5 * * * ?")
+    @Scheduled(cron = "0 3/5 * * * ?")
     public void syncAccount1() {
         try {
             System.out.println("更新客户--同步开始");
@@ -928,7 +808,7 @@ public class SyncOtherService extends CommonController {
      * 根据合同创建订单
      */
 //    @Scheduled(cron = "0/5 * * * * ?")
-    @Scheduled(cron = "0 0/5 * * * ?")
+    @Scheduled(cron = "0 4/5 * * * ?")
     public void createOrder() {
         try {
             StringBuilder sb = new StringBuilder();
@@ -1706,11 +1586,11 @@ public class SyncOtherService extends CommonController {
                                     Sequence++;
                                     JSONObject dataObject1 = new JSONObject();
                                     dataObject1.put("Sequence", Sequence);//顺序
-//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
-//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_num", CoNum);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", CoLine);//客户订单行 todo 暂不传
 //                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
-//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
-//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+//                                dataObject1.put("item", Item);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", CoCustNum);//客户编号 todo 暂不传
                                     dataObject1.put("specific", bz_customItem219__c);//规格
                                     dataObject1.put("pt_num", bz_customItem207__c);//包装模板号
                                     dataObject1.put("matl_qty", quantity);//内容量
@@ -1726,11 +1606,11 @@ public class SyncOtherService extends CommonController {
                                     Sequence++;
                                     JSONObject dataObject1 = new JSONObject();
                                     dataObject1.put("Sequence", Sequence);//顺序
-//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
-//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_num", CoNum);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", CoLine);//客户订单行 todo 暂不传
 //                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
-//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
-//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+//                                dataObject1.put("item", Item);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", CoCustNum);//客户编号 todo 暂不传
                                     dataObject1.put("specific", bz_customItem220__c);//规格
                                     dataObject1.put("pt_num", bz_customItem208__c);//包装模板号
                                     dataObject1.put("matl_qty", quantity);//内容量
@@ -1747,11 +1627,11 @@ public class SyncOtherService extends CommonController {
                                     Sequence++;
                                     JSONObject dataObject1 = new JSONObject();
                                     dataObject1.put("Sequence", Sequence);//顺序
-//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
-//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_num", CoNum);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", CoLine);//客户订单行 todo 暂不传
 //                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
-//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
-//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+//                                dataObject1.put("item", Item);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", CoCustNum);//客户编号 todo 暂不传
                                     dataObject1.put("specific", bz_customItem218__c);//规格
                                     dataObject1.put("pt_num", bz_customItem204__c);//包装模板号
                                     dataObject1.put("matl_qty", quantity);//内容量
@@ -1768,11 +1648,11 @@ public class SyncOtherService extends CommonController {
                                     Sequence++;
                                     JSONObject dataObject1 = new JSONObject();
                                     dataObject1.put("Sequence", Sequence);//顺序
-//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
-//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_num", CoNum);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", CoLine);//客户订单行 todo 暂不传
 //                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
-//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
-//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+//                                dataObject1.put("item", Item);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", CoCustNum);//客户编号 todo 暂不传
                                     dataObject1.put("specific", bz_customItem221__c);//规格
                                     dataObject1.put("pt_num", bz_customItem209__c);//包装模板号
                                     dataObject1.put("matl_qty", quantity);//内容量
@@ -1789,11 +1669,11 @@ public class SyncOtherService extends CommonController {
                                     Sequence++;
                                     JSONObject dataObject1 = new JSONObject();
                                     dataObject1.put("Sequence", Sequence);//顺序
-//                                dataObject1.put("co_num", Sequence);//客户订单编号 todo 暂不传
-//                                dataObject1.put("co_line", Sequence);//客户订单行 todo 暂不传
+//                                dataObject1.put("co_num", CoNum);//客户订单编号 todo 暂不传
+//                                dataObject1.put("co_line", CoLine);//客户订单行 todo 暂不传
 //                                dataObject1.put("co_release", Sequence);//下达 todo 暂不传
-//                                dataObject1.put("item", Sequence);//物料 todo 暂不传
-//                                dataObject1.put("cust_num", Sequence);//客户编号 todo 暂不传
+//                                dataObject1.put("item", Item);//物料 todo 暂不传
+//                                dataObject1.put("cust_num", CoCustNum);//客户编号 todo 暂不传
                                     dataObject1.put("specific", bz_customItem222__c);//规格
                                     dataObject1.put("pt_num", bz_customItem217__c);//包装模板号
                                     dataObject1.put("matl_qty", quantity);//内容量
@@ -1848,7 +1728,7 @@ public class SyncOtherService extends CommonController {
     }
 
 //        @Scheduled(cron = "0/5 * * * * ?")
-    @Scheduled(cron = "0 0/5 * * * ?")
+    @Scheduled(cron = "0 4/5 * * * ?")
     public void syncOrderProduct() {
         try {
 //            String fieldsByBelongId_order = queryServer.getFieldsByBelongId(35L);

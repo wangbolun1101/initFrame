@@ -82,6 +82,122 @@ public class SyncOADataController extends CommonController{
         return token;
     }
 
+
+    /*
+     * @Description TODO 防伪追溯ID初始化
+     * @author lucg.
+     * @date 2020/12/28 16:54
+     */
+    @RequestMapping("/initAgencys")
+    public void initAgencys() throws Exception {
+        JSONArray addArray = new JSONArray();
+        Map<String, JSONArray> ERPDataMap = new HashMap<>();
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("LIVE_SDUSA");
+
+        Map<String, JSONObject> map = new HashMap<>();
+        String accountSql = "select id,customItem201__c,ownerId from account";
+        JSONObject bySql1 = queryServer.getByXoqlSimple(accountSql);
+        JSONArray all1 = queryServer.getAllByXoqlSample(getToken(), bySql1, accountSql);
+        for (int i = 0; i < all1.size(); i++) {
+            JSONObject jsonObject = all1.getJSONObject(i);
+            String customItem201__c = jsonObject.getString("customItem201__c");
+            map.put(customItem201__c, jsonObject);
+        }
+
+        for (int i = 0; i < jsonArray.size(); i++) {
+            String config = jsonArray.getString(i);
+            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+            String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "Name,CustNum,HX_Agencys", "", "", "", 300000);
+            JSONObject resultJson = JSONObject.parseObject(result);
+            JSONArray propertyList = resultJson.getJSONArray("PropertyList");
+            JSONArray Items = resultJson.getJSONArray("Items");
+            JSONArray propertyArray = new JSONArray();
+            for (int j = 0; j < Items.size(); j++) {
+                JSONObject jsonObject1 = Items.getJSONObject(j);
+                JSONArray properties = jsonObject1.getJSONArray("Properties");
+                JSONObject propertieObject = new JSONObject();
+                for (int k = 0; k < properties.size(); k++) {
+                    JSONObject jsonObject2 = properties.getJSONObject(k);
+                    String property_0 = jsonObject2.getString("Property");
+                    String string = propertyList.getString(k);
+                    propertieObject.put(string, property_0);
+                }
+                propertyArray.add(propertieObject);
+            }
+            ERPDataMap.put(config, propertyArray);
+        }
+        for (Map.Entry<String, JSONArray> item : ERPDataMap.entrySet()) {
+            String config = item.getKey();
+            JSONArray value = item.getValue();
+            for (int i = 0; i < value.size(); i++) {
+                JSONObject jsonObject = value.getJSONObject(i);
+                String HX_Agencys = jsonObject.getString("HX_Agencys");
+                String CustNum = jsonObject.getString("CustNum");
+                JSONObject account = map.get(CustNum);
+                if (account == null||StringUtils.isBlank(HX_Agencys)) {
+                    continue;
+                }
+                Long id = account.getLong("id");
+                JSONObject object = new JSONObject();
+                object.put("id", id);
+                object.put("customItem229__c", HX_Agencys);
+                addArray.add(object);
+            }
+        }
+        if (addArray.size()>0){
+            bulkAPI.createDataTaskJob(addArray, "account", "udpate");
+        }
+    }
+
+
+    /*
+     * @Description TODO 更新收货地址及收票地址的名称
+     * @author lucg.
+     * @date 2020/12/25 11:44
+     */
+    @RequestMapping("/updateAddressName")
+    public void updateAddressName() throws Exception {
+        JSONArray jsonArray = new JSONArray();
+        JSONArray jsonArray1 = new JSONArray();
+        String sql = "select id,customItem4__c from customEntity7__c";
+        JSONObject bySql1 = queryServer.getByXoqlSimple(sql);
+        JSONArray addressArray = queryServer.getAllByXoqlSample(getToken(), bySql1, sql);
+        for (int i = 0; i < addressArray.size(); i++) {
+            JSONObject jsonObject = addressArray.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String customItem4__c = jsonObject.getString("customItem4__c");
+            if (StringUtils.isNotBlank(customItem4__c)) {
+                JSONObject object = new JSONObject();
+                object.put("id", id);
+                object.put("name", customItem4__c);
+                jsonArray.add(object);
+            }
+        }
+        String sql1 = "select id,customItem4__c from customEntity9__c";
+        JSONObject bySql2 = queryServer.getByXoqlSimple(sql1);
+        JSONArray addressArray1 = queryServer.getAllByXoqlSample(getToken(), bySql2, sql1);
+        for (int i = 0; i < addressArray1.size(); i++) {
+            JSONObject jsonObject = addressArray1.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String customItem4__c = jsonObject.getString("customItem4__c");
+            if (StringUtils.isNotBlank(customItem4__c)){
+                JSONObject object = new JSONObject();
+                object.put("id", id);
+                object.put("name", customItem4__c);
+                jsonArray1.add(object);
+            }
+        }
+
+        if (jsonArray.size() > 0) {
+            bulkAPI.createDataTaskJob(jsonArray, "customEntity7__c", "update");
+        }
+        if (jsonArray1.size() > 0) {
+            bulkAPI.createDataTaskJob(jsonArray1, "customEntity9__c", "update");
+        }
+    }
+
+
     /*
      * @Description TODO 初始化美国客户ERP账套
      * @author lucg.
@@ -389,13 +505,13 @@ public class SyncOADataController extends CommonController{
                 String custSeq = jsonObject.getString("CustSeq");
                 String CustNum = jsonObject.getString("CustNum");
                 String Name = jsonObject.getString("Name");
-                String s = addressExisitMap.get(config + "," + CustNum + "," + Name);
+                String addr_1 = jsonObject.getString("Addr_1");
+                String addr_2 = jsonObject.getString("Addr_2");
+                String addr_3 = jsonObject.getString("Addr_3");
+                String addr_4 = jsonObject.getString("Addr_4");
+                String s = addressExisitMap.get(config + "," + CustNum + "," + addr_1 + addr_2 + addr_3 + addr_4);
                 if (StringUtils.isBlank(s)) {//不存在，创建
                     addressExisitMap.put(config + "," + CustNum + "," + Name, "success");
-                    String addr_1 = jsonObject.getString("Addr_1");
-                    String addr_2 = jsonObject.getString("Addr_2");
-                    String addr_3 = jsonObject.getString("Addr_3");
-                    String addr_4 = jsonObject.getString("Addr_4");
                     String country = jsonObject.getString("Country");
                     String State = jsonObject.getString("State");
                     String City = jsonObject.getString("City");
@@ -436,7 +552,7 @@ public class SyncOADataController extends CommonController{
                     addObject.put("customItem1__c", accountId);
                     addObject.put("customItem11__c", erpId);
                     addObject.put("entityType", 729741452263662L);
-                    addObject.put("name", Name);
+                    addObject.put("name", addr_1 + addr_2 + addr_3 + addr_4);
                     addArray.add(addObject);
                 }
             }
@@ -559,7 +675,6 @@ public class SyncOADataController extends CommonController{
                 JSONObject jsonObject = value.getJSONObject(i);
                 String accountNo = jsonObject.getString("DropShipNo");
                 String erp_id = jsonObject.getString("DropSeq");
-                String Name = jsonObject.getString("Name");
                 String address1 = jsonObject.getString("addr_1");
                 String address2 = jsonObject.getString("addr_2");
                 String address3 = jsonObject.getString("addr_3");
@@ -578,7 +693,8 @@ public class SyncOADataController extends CommonController{
                 Long erpId = ERPObject.getLong("id");
 //                String accountName = ERPObject.getString("customItem10__c");
                 String ownerName = ERPObject.getString("customItem11__c");
-                String address = (StringUtils.isNotBlank(address1) && StringUtils.isNotBlank(address2)) ? address1 + ";" + address2 : (StringUtils.isNotBlank(address1) && StringUtils.isBlank(address2)) ? address1 : address2;
+                String address = address1 + address2 + address3 + address4;
+                String Name = address;
                 Integer countryInt = CountryMap.get(country);
                 String priovince_replacce = provinceReverseJson.getString(province);
                 Integer provinceInt = provinceMap.get(priovince_replacce);
@@ -611,7 +727,7 @@ public class SyncOADataController extends CommonController{
                     paramObject.put("customItem2__c", contact);
                     paramObject.put("customItem3__c", phone);
                     paramObject.put("erp_id__c", erp_id);
-                    paramObject.put("name", Name);
+                    paramObject.put("name", address);
                     paramObject.put("customItem4__c", address);
                     paramObject.put("customItem8__c", "同步成功");
                     paramArray.add(paramObject);
@@ -625,6 +741,56 @@ public class SyncOADataController extends CommonController{
         return null;
     }
 
+    /**
+     * 账户信息初始化
+     * @return
+     */
+    @RequestMapping("/deleteMoreBankInfo")
+    @ResponseBody
+    public String deleteMoreBankInfo () throws Exception {
+        JSONArray jsonArray = new JSONArray();
+        JSONArray deleteJsonArray = new JSONArray();
+        Map<String,Long>addressMap = new HashMap<>();
+        Map<String,Long>addressIdMap = new HashMap<>();
+        Set set = new HashSet();
+        String addressSql = "select id,customItem1__c,name,createdAt from customEntity6__c" ;
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(addressSql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, addressSql);
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            Long accountId = jsonObject.getLong("customItem1__c");
+            Long createdAt = jsonObject.getLong("createdAt");
+            String name = jsonObject.getString("name");
+            if (set.add(accountId + "," + name)){
+                addressMap.put(accountId + "," + name, createdAt);
+                addressIdMap.put(accountId + "," + name, id);
+            }else {
+                //获取已保存最早时间
+                Long time = addressMap.get(accountId + "," + name);
+                //比较时间，若当前数据早于最早时间，替换并删除旧数据
+                if (createdAt.longValue()<time.longValue()){
+                    Long earlyId = addressIdMap.get(accountId + "," + name);
+                    addressIdMap.put(accountId + "," + name, id);
+                    addressMap.put(accountId + "," + name, createdAt);
+                    jsonArray.add(earlyId);
+                }else {
+                    jsonArray.add(id);
+                }
+            }
+
+        }
+        for (int i = 0; i < jsonArray.size(); i++) {
+            Long id = jsonArray.getLong(i);
+            JSONObject object = new JSONObject();
+            object.put("id", id);
+            deleteJsonArray.add(object);
+        }
+        if (deleteJsonArray.size()>0) {
+            bulkAPI.createDataTaskJob(deleteJsonArray, "customEntity6__c", "delete");
+        }
+        return null;
+    }
     /**
      * 账户信息初始化
      * @return
@@ -653,7 +819,7 @@ public class SyncOADataController extends CommonController{
         Map<String, JSONArray> ERPMap = new HashMap<>();
 
 
-            String ERPAccountSql = "select id,customItem201__c,ownerId,accountName from account";
+            String ERPAccountSql = "select id,customItem201__c,ownerId,accountName from account ";
         JSONObject byXoqlSimple3 = queryServer.getByXoqlSimple(ERPAccountSql);
         JSONArray allByXoqlSample3 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple3, ERPAccountSql);
         for (int i = 0; i < allByXoqlSample3.size(); i++) {
@@ -682,7 +848,7 @@ public class SyncOADataController extends CommonController{
             }
         }
 
-        String addressSql = "select id,customItem1__c,name from customEntity6__c";
+        String addressSql = "select id,customItem1__c,name from customEntity6__c where createdBy = 1185240 and createdAt > 1608704111000 and createdAt < 1608704233000" ;
         JSONObject byXoqlSimple = queryServer.getByXoqlSimple(addressSql);
         JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, addressSql);
         for (int i = 0; i < allByXoqlSample.size(); i++) {
@@ -747,24 +913,32 @@ public class SyncOADataController extends CommonController{
                 Integer taxCode = TaxCodeObject.getInteger(TaxCode1);
 
 
-                Long aLong = addressMap.get(accountId + accountName);
+                Long aLong = addressMap.get(accountId +","+ accountName);
                 if (aLong == null || aLong == 0) {
+//                    JSONObject paramObject = new JSONObject();
+//                    paramObject.put("entityType", 729630902403355L);
+//                    if (accountId == null || accountId == 0) {
+//                        continue;
+//                    }
+//                    paramObject.put("name", accountName);
+//                    paramObject.put("customItem1__c", accountId);
+//                    paramObject.put("customItem4__c", cusUf_Bank);
+//                    paramObject.put("customItem5__c", cusUf_BankAcct);
+//                    paramObject.put("customItem7__c", Charfld3);
+//                    paramObject.put("customItem8__c", Charfld2);
+//                    paramObject.put("customItem14__c", PayTypeInteger);
+//                    paramObject.put("customItem16__c", cusUf_Note);
+//                    paramObject.put("customItem19__c", "同步成功");
+//                    paramObject.put("customItem9__c", taxCode);
+//                    paramObject.put("customItem22__c", bankCode);
+//                    if (set.add(accountId)){
+//                        paramArray.add(paramObject);
+//                    }
+                    continue;
+                }else {
                     JSONObject paramObject = new JSONObject();
-                    paramObject.put("entityType", 729630902403355L);
-                    if (accountId == null || accountId == 0) {
-                        continue;
-                    }
-                    paramObject.put("name", accountName);
-                    paramObject.put("customItem1__c", accountId);
-                    paramObject.put("customItem4__c", cusUf_Bank);
-                    paramObject.put("customItem5__c", cusUf_BankAcct);
-                    paramObject.put("customItem7__c", Charfld3);
-                    paramObject.put("customItem8__c", Charfld3);
-                    paramObject.put("customItem14__c", PayTypeInteger);
-                    paramObject.put("customItem16__c", cusUf_Note);
-                    paramObject.put("customItem19__c", "同步成功");
-                    paramObject.put("customItem9__c", taxCode);
-                    paramObject.put("customItem22__c", bankCode);
+                    paramObject.put("id", aLong);
+                    paramObject.put("customItem8__c", Charfld2);
                     if (set.add(accountId)){
                         paramArray.add(paramObject);
                     }
@@ -772,7 +946,7 @@ public class SyncOADataController extends CommonController{
             }
         }
         if (paramArray.size()>0) {
-            bulkAPI.createDataTaskJob(paramArray, "customEntity6__c", "insert");
+            bulkAPI.createDataTaskJob(paramArray, "customEntity6__c", "update");
         }
 
         return null;

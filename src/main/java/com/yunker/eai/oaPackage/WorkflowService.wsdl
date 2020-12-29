@@ -1378,7 +1378,7 @@
   </wsdl:binding>
   <wsdl:service name="WorkflowService">
     <wsdl:port name="WorkflowServiceHttpPort" binding="tns:WorkflowServiceHttpBinding">
-<!--      <wsdlsoap:address location="http://10.10.0.251:8089/services/WorkflowService"/>-->
+      <!--<wsdlsoap:address location="http://10.10.0.251:8089/services/WorkflowService"/>-->
       <wsdlsoap:address location="http://bloomageoa.bloomagebiotech.com/services/WorkflowService"/>
     </wsdl:port>
   </wsdl:service>
