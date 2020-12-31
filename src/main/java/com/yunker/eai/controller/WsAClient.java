@@ -36,9 +36,9 @@ public class WsAClient {
 //        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLLots", "Lot", " Lot = '1307040101-1000'", "", "", -1);
 
 //        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLSalesTeamMembers", "RefNum,DerFullName,SalesTeamID", "", "", "", -1);
-        String result = idoWebServiceSoap.loadJson(ERPtoken, "HXCustLicences", "custnum,lic,licnum,expdate,Uf_ProDate", "custnum='HAH0058'", "", "", 300000);
-////
-////        //输出查询结果
+        String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "SalesTeamID,Name,ReservedField1,CustNum,State,City,County,CustType,uf_domfor,uf_saleway,uf_ifonline,uf_org1,uf_org2,uf_org3,uf_ifstop,Country,Zip,TerritoryCode,CurrCode,uf_createdate,uf_regfund,uf_salescale,uf_lawsuit", "", "", "", 300000);
+//
+//        //输出查询结果
 //        System.out.println(result);
         JSONObject resultJson = JSONObject.parseObject(result);
         JSONArray propertyList = resultJson.getJSONArray("PropertyList");
@@ -89,10 +89,10 @@ public class WsAClient {
 
         //自定义方法调用（具体参数要问客户那边技术）（这个自定义接口是获取客户最新编号的接口）
 //        Holder<String> pa = new Holder<>("<Parameters><Parameter>SF</Parameter><Parameter ByRef=\"Y\"></Parameter></Parameters>");
-        Holder<String> pa = new Holder<>("<Parameters><Parameter>" + "KUS0037" + "</Parameter>" +
-                "<Parameter>"+"Y011"+"</Parameter>" +
-                "<Parameter>"+"E45"+"</Parameter>" +
-                "<Parameter>"+"3198"+"</Parameter>" +
+        Holder<String> pa = new Holder<>("<Parameters><Parameter>" + "JSH0124" + "</Parameter>" +
+                "<Parameter>"+"Y001"+"</Parameter>" +
+                "<Parameter>"+"E90"+"</Parameter>" +
+                "<Parameter>"+"120000"+"</Parameter>" +
                 "<Parameter ByRef=\"Y\"></Parameter></Parameters>");
         Holder<Object> pa2 = new Holder<>();
         idoWebServiceSoap.callMethod(ERPtoken, "SP!", "hxsp_calc_ecocredit_crm", pa, pa2);

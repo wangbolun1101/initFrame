@@ -288,8 +288,6 @@ public class SyncController extends CommonController{
            int indexEnd = customNum.indexOf("</Parameter></Parameters>");
            String CustNum=customNum.substring(indexStart,indexEnd);//客户编号
            JSONArray ERPDataArray = ERPDataMap.get(accountId);
-
-           boolean syncFlag = false;
            for (int j = 0; j < ERPDataArray.size(); j++) {
                JSONObject ERPDataObject = ERPDataArray.getJSONObject(j);
                String ERPConfig = ERPDataObject.getString("customItem3__c");
@@ -349,12 +347,9 @@ public class SyncController extends CommonController{
 
                String slCustomers = addData(ERPtoken, "SLCustomers", allItems, propertyList);//同步客户
                //更新CRM客户编号
-               if (StringUtils.isBlank(slCustomers)){
-                   syncFlag = true;
-                   String s = updateCustomerERPNo(ERPDataId, CustNum);
-                   System.out.println("同步成功后回显客户编号："+s);
-                   ModuleOutputLogger.autoSyncAccount.info("同步客户--同步成功后回显客户编号："+s);
-               }
+               String s = updateCustomerERPNo(ERPDataId, CustNum);
+               System.out.println("同步成功后回显客户编号："+s);
+               ModuleOutputLogger.autoSyncAccount.info("同步客户--同步成功后回显客户编号："+s);
                String userResult = addData(ERPtoken, "SLSalesTeams", allUserArray, userFields);//同步销售团队
                String TeamMembersResult = addData(ERPtoken, "SLSalesTeamMembers", alTeamMembers, TeamMembers);//同步销售团队
                String GlobalsResult = addData(ERPtoken, "CustToGlobals", allGlobalsArray, GlobalsUserFields);//同步Globals
@@ -379,9 +374,7 @@ public class SyncController extends CommonController{
                    ModuleOutputLogger.autoSyncAccount.info("分事业部信用额度同步结果："+otherCredits);
                }
            }
-           if (syncFlag){
-               String s = updateAccountERPNo(accountId, CustNum);
-           }
+           String s = updateAccountERPNo(accountId, CustNum);
 
 //           //同步分事业部信用额度
 //           if (StringUtils.isNotBlank(bu)){

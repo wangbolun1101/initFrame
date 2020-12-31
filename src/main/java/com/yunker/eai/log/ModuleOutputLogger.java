@@ -39,9 +39,6 @@ public class ModuleOutputLogger {
     public static Logger handSyncContact = Logger.getLogger("handSyncContact");
     public static Logger handSyncContactError = Logger.getLogger("handSyncContactError");
 
-    public static Logger custLicences = Logger.getLogger("custLicences");
-    public static Logger custLicencesError = Logger.getLogger("custLicencesError");
-
 
 
 }
