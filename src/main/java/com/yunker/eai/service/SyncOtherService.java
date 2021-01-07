@@ -2103,10 +2103,10 @@
 //                            }
 //                            if (StringUtils.isNotBlank(bz_customItem217__c)){
 //
-//                                // bz_customItem222__c //标签规格2
-//                                // bz_customItem217__c //标签模板2
-//                                // bz_customItem224__c //标签装数2
-//                                // bz_customItem229__c //标签小计2
+////                                 bz_customItem222__c //标签规格2
+////                                 bz_customItem217__c //标签模板2
+////                                 bz_customItem224__c //标签装数2
+////                                 bz_customItem229__c //标签小计2
 //                                Sequence++;
 //                                JSONObject dataObject = new JSONObject();
 //                                dataObject.put("Sequence", Sequence);//顺序
