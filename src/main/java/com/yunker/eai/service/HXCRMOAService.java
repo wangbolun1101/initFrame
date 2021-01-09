@@ -51,7 +51,7 @@ public class HXCRMOAService extends CommonController {
      * @return
      * @throws Exception
      */
-    @Scheduled(cron = "0 0 0 */1 * ?")
+//    @Scheduled(cron = "0 0 0 */1 * ?")
     public String getToken() throws Exception {
         if (!this.httpClientUtil.instanceTargetToken()) {
             throw new Exception("验证Token出错！");
