@@ -70,6 +70,9 @@ public class SyncController extends CommonController{
 
     }
 
+
+
+
     /**
      * 同步客户 CRM->ERP
      */
@@ -466,7 +469,7 @@ public class SyncController extends CommonController{
      */
     @RequestMapping("/syncAddress")
     @ResponseBody
-    public String syncAaddress(@RequestBody JSONObject param){
+    public String syncAaddress(@RequestBody JSONObject param){//
         Long addressId=param.getLong("addressId");
         System.out.println("收货地址编号："+addressId);
         ModuleOutputLogger.handSyncContact.info("收货地址编号："+addressId);

@@ -1,5 +1,6 @@
 package com.yunker.eai.controller;
 
+import cn.afterturn.easypoi.cache.manager.IFileLoader;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -7,9 +8,11 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.yunker.eai.config.FlowErrorCode;
 import com.yunker.eai.entity.Credit;
 import com.yunker.eai.log.ModuleOutputLogger;
+import com.yunker.eai.oaPackage.HXCRMService;
 import com.yunker.eai.oaPackage.WorkflowRequestInfo;
 import com.yunker.eai.oaPackage.WorkflowServiceLocator;
 import com.yunker.eai.oaPackage.WorkflowServicePortType;
+import com.yunker.eai.service.HXCRMOAService;
 import com.yunker.eai.util.*;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +57,15 @@ public class SyncOADataController extends CommonController {
     private WorkFlowUtil workFlowUtil;
     @Autowired
     private BulkAPI bulkAPI;
+    @Autowired
+    private HXCRMOAService service;
+
+    //同步OA账号
+    @RequestMapping("/syncOa")
+    @ResponseBody
+    public void syncoa() throws Exception {
+        service.HXCRMoa();
+    }
 
 
     //实例化接口
@@ -64,6 +76,7 @@ public class SyncOADataController extends CommonController {
     private String userId = "crm";//用户名
     private String pswd = "Crm123456";//密码
     private String config = "LIVE_HXSW";//密码
+
     /**
      * 获取token
      *
@@ -80,6 +93,272 @@ public class SyncOADataController extends CommonController {
         }
         return token;
     }
+
+
+    @RequestMapping("/initCustNum")
+    @ResponseBody
+    public void initCustNum() throws Exception {
+
+        JSONArray jsonArray = new JSONArray();
+//        jsonArray.add("LIVE_SDUSA");
+//        jsonArray.add("LIVE_HXYLQX");
+//        jsonArray.add("LIVE_HXLMD");
+//        jsonArray.add("LIVE_SDHY");
+//        jsonArray.add("LIVE_BJHY");
+        jsonArray.add("LIVE_HXSW");
+
+
+        Map<String, JSONArray> ERPDataMap = new HashMap<>();
+        Map<String, Long> accountMap = new HashMap<>();
+        Map<String, Map<String, JSONArray>> IteamDataMap = new HashMap<>();
+        Map<String, Long> codeMap = new HashMap<>();
+
+        //查询CRM中所有客户
+        String sql = "select id,accountName,customItem201__c from account where customItem240__c=1";
+        JSONObject byXoqlSimple = queryServer.getByXoqlSimple(sql);
+        JSONArray allByXoqlSample = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple, sql);
+        for (int i = 0; i < allByXoqlSample.size(); i++) {
+            JSONObject jsonObject = allByXoqlSample.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String accountName = jsonObject.getString("accountName");
+            accountMap.put(accountName, id);
+        }
+
+        //查询ERP客户
+        for (int i = 0; i < jsonArray.size(); i++) {
+            String config = jsonArray.getString(i);
+            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+            String result = idoWebServiceSoap.loadJson(ERPtoken, "SLCustomers", "Name,CustNum", "", "", "", 300000);
+            JSONObject resultJson = JSONObject.parseObject(result);
+            JSONArray propertyList = resultJson.getJSONArray("PropertyList");
+
+            JSONArray Items = resultJson.getJSONArray("Items");
+            JSONArray propertyArray = new JSONArray();
+            for (int j = 0; j < Items.size(); j++) {
+                JSONObject jsonObject1 = Items.getJSONObject(j);
+                JSONArray properties = jsonObject1.getJSONArray("Properties");
+                JSONObject propertieObject = new JSONObject();
+                for (int k = 0; k < properties.size(); k++) {
+                    JSONObject jsonObject2 = properties.getJSONObject(k);
+                    String property_0 = jsonObject2.getString("Property");
+                    if(jsonObject2.getString("Property").equals("深圳香蜜丽格医疗美容诊所")){
+                        String s = jsonObject2.getString("Property");
+                    }
+                    String string = propertyList.getString(k);
+                    propertieObject.put(string, property_0);
+                }
+                propertyArray.add(propertieObject);
+            }
+            //ERPDataMap.put(config, propertyArray);
+        }
+
+
+        HashSet<Object> set = new HashSet<>();
+        JSONArray updateNumArray = new JSONArray();
+        for (Map.Entry<String, JSONArray> item : ERPDataMap.entrySet()) {
+            JSONArray value = item.getValue();
+            for (int i = 0; i < value.size(); i++) { //遍历所有ERP数据
+                JSONObject jsonObject = value.getJSONObject(i);
+                String Name = jsonObject.getString("Name");
+                String CustNum = jsonObject.getString("CustNum");
+
+
+                Long accountId = accountMap.get(Name);
+                if (accountId == null || accountId == 0) {
+                    continue;
+                }
+                else {
+                    if (!set.add(accountId)) {
+                        continue;
+                    }
+                    JSONObject updateObject = new JSONObject();
+                    updateObject.put("id", accountId);
+                    updateObject.put("customItem201__c", CustNum);
+//                    updateObject.put("customItem240__c", "true");
+                    updateNumArray.add(updateObject);
+
+                }
+            }
+        }
+        if (updateNumArray.size() > 0) {
+            bulkAPI.createDataTaskJob(updateNumArray, "account", "update");
+        }
+
+
+    }
+
+
+    /*
+     * 初始化产品ERP->CRM
+     * @author wangym
+     * @date 2021/1/5 17:20
+     *
+     * */
+    @RequestMapping("/initProduct")
+    @ResponseBody
+    public void initProduct() throws Exception {
+
+        Map<String, JSONArray> ERPDataMap = new HashMap<>();
+
+        JSONArray jsonArray = new JSONArray();
+//        jsonArray.add("LIVE_SDUSA");
+//        jsonArray.add("LIVE_HXYLQX");
+//        jsonArray.add("LIVE_HXLMD");
+//        jsonArray.add("LIVE_SDHY");
+//        jsonArray.add("LIVE_BJHY");
+        jsonArray.add("LIVE_HXSW");
+//        jsonArray.add("LIVE_DYFST");
+
+
+        JSONObject object = JSONObject.parseObject("{\n" +
+                "  \"LIVE_SDUSA\":1,\n" +
+                "  \"LIVE_HXYLQX\":2,\n" +
+                "  \"LIVE_HXLMD\":3,\n" +
+                "  \"LIVE_SDHY\":4,\n" +
+                "  \"LIVE_BJHY\":5,\n" +
+                "  \"LIVE_HXSW\":6\n" +
+                "}");
+
+        JSONObject spec = JSONObject.parseObject("{\n" +
+                "  \"0-100g/瓶\":1,\n" +
+                "  \"1-200g/瓶\":2,\n" +
+                "  \"2-500g/袋\":3,\n" +
+                "  \"3-1kg/袋\":4,\n" +
+                "  \"4-5kg/袋\":5,\n" +
+                "  \"5-10kg/袋\":6,\n" +
+                "  \"6-50g/肖特瓶\":7,\n" +
+                "  \"7-100g/肖特瓶\":8,\n" +
+                "  \"8-1kg/溶液瓶\":9,\n" +
+                "  \"9-20kg/桶\":10,\n" +
+                "  \"10-1kg/广口塑料瓶\":11,\n" +
+                "  \"11-5g/袋\":12,\n" +
+                "  \"12-其他\":13,\n" +
+                "}");
+
+        JSONObject brand = JSONObject.parseObject("{\n" +
+                "  \"润百颜\":1,\n" +
+                "  \"润百颜护肤\":2,\n" +
+                "  \"润百颜针剂\":3,\n" +
+                "}");
+
+
+        //查询ERP中物料
+        for (int i = 0; i < jsonArray.size(); i++) {
+            String config = jsonArray.getString(i);
+            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+            String result = idoWebServiceSoap.loadJson(ERPtoken, "SLItems", "Item,Description,itmUf_Specification,UM,itmUf_OwnerBu", "itmUf_OwnerBu='润百颜' or itmUf_OwnerBu='润百颜护肤' or itmUf_OwnerBu='润百颜针剂' ", "", "", 300000);
+            JSONObject resultJson = JSONObject.parseObject(result);
+            JSONArray propertyList = resultJson.getJSONArray("PropertyList");
+            JSONArray Items = resultJson.getJSONArray("Items");
+            JSONArray propertyArray = new JSONArray();
+            for (int j = 0; j < Items.size(); j++) {
+                JSONObject jsonObject1 = Items.getJSONObject(j);
+                JSONArray properties = jsonObject1.getJSONArray("Properties");
+                JSONObject propertieObject = new JSONObject();
+                for (int k = 0; k < properties.size(); k++) {
+                    JSONObject jsonObject2 = properties.getJSONObject(k);
+                    String property_0 = jsonObject2.getString("Property");
+                    String string = propertyList.getString(k);
+                    propertieObject.put(string, property_0);
+                }
+                propertyArray.add(propertieObject);
+            }
+            ERPDataMap.put(config, propertyArray);
+        }
+
+//        for (int i = 0; i < jsonArray.size(); i++) {
+//            String config = jsonArray.getString(i);
+//            String ERPtoken = idoWebServiceSoap.createSessionToken(userId, pswd, config);
+//            String result = idoWebServiceSoap.loadJson(ERPtoken, "HX_ItemSpecDesc", "item,description,Spec,SpecDesc", "", "", "", 300000);
+//            JSONObject resultJson = JSONObject.parseObject(result);
+//            JSONArray propertyList = resultJson.getJSONArray("PropertyList");
+//            JSONArray Items = resultJson.getJSONArray("Items");
+//            JSONArray propertyArray = new JSONArray();
+//            for (int j = 0; j < Items.size(); j++) {
+//                JSONObject jsonObject1 = Items.getJSONObject(j);
+//                JSONArray properties = jsonObject1.getJSONArray("Properties");
+//                JSONObject propertieObject = new JSONObject();
+//                for (int k = 0; k < properties.size(); k++) {
+//                    JSONObject jsonObject2 = properties.getJSONObject(k);
+//                    String property_0 = jsonObject2.getString("Property");
+//                    String string = propertyList.getString(k);
+//                    propertieObject.put(string, property_0);
+//                }
+//                propertyArray.add(propertieObject);
+//            }
+//            ERPDataMap1.put(config, propertyArray);
+//        }
+
+
+        Map<Object, Long> proNumMap = new HashMap<>();
+
+        HashMap<Object, Object> objectObjectHashMap = new HashMap<>();
+
+
+        //查询CRM中产品
+        String sql = "select id, priceUnit, enableStatus, productName, customItem130__c, customItem129__c, customItem134__c, customItem133__c, parentId, customItem139__c, customItem140__c from product  ";
+        String bySql = queryServer.getBySql(sql);
+        JSONArray all = queryServer.findAll(getToken(), bySql, sql);
+        for (int i = 0; i < all.size(); i++) {
+            JSONObject jsonObject = all.getJSONObject(i);
+            Long id = jsonObject.getLong("id");
+            String productName = jsonObject.getString("productName");
+            String proNum = jsonObject.getString("customItem130__c");
+//            String customItem139__c = jsonObject.getString("customItem139__c");
+//            String customItem140__c = jsonObject.getString("customItem140__c");
+//            String parentId = jsonObject.getString("parentId");
+            proNumMap.put(proNum, id);
+
+        }
+
+        JSONArray productArray = new JSONArray();
+        for (Map.Entry<String, JSONArray> item : ERPDataMap.entrySet()) {
+            String config = item.getKey();
+            Integer erpNo = object.getInteger(config);
+            JSONArray value = item.getValue();
+            for (int i = 0; i < value.size(); i++) {
+                JSONObject jsonObject = value.getJSONObject(i);
+                String Item = jsonObject.getString("Item");
+                String Description = jsonObject.getString("Description");
+                String itmUf_Specification = jsonObject.getString("itmUf_Specification");
+                String UM = jsonObject.getString("UM");
+                String itmUf_OwnerBu = jsonObject.getString("itmUf_OwnerBu");
+
+
+                String customItem129__c = itmUf_Specification;
+                Integer customItem143__c = brand.getInteger(itmUf_OwnerBu);
+                String productName = Description;
+                String customItem130__c = Item;
+                String unit = UM;
+
+
+                Long proId = proNumMap.get(customItem130__c);
+                if (proId == null || proId == 0) {
+                    JSONObject product = new JSONObject();
+                    product.put("entityType", 7845905L);
+                    product.put("productName", productName);
+                    product.put("unit", unit);
+                    product.put("customItem130__c", customItem130__c);
+                    product.put("customItem129__c", customItem129__c);
+                    product.put("customItem139__c", erpNo);
+                    product.put("customItem141__c", 1);
+                    product.put("customItem142__c", null);
+                    product.put("customItem143__c", customItem143__c);
+                    product.put("parentId", 1311359871189403L);
+                    product.put("customItem140__c", 1);
+                    product.put("enableStatus", 1);
+                    product.put("priceUnit", "0");
+
+                    productArray.add(product);
+                }
+            }
+        }
+        if (productArray.size() > 0) {
+//            bulkAPI.createDataTaskJob(productArray, "product", "insert");
+        }
+    }
+
+
     /*
      * @Description TODO 初始化美国客户ERP账套
      * @author lucg.
@@ -98,6 +377,7 @@ public class SyncOADataController extends CommonController {
 //        jsonArray.add("LIVE_SDHY");
 //        jsonArray.add("LIVE_BJHY");
 //        jsonArray.add("LIVE_HXSW");
+
 
         JSONObject object = JSONObject.parseObject("{\n" +
                 "  \"LIVE_SDUSA\":1,\n" +
@@ -253,7 +533,7 @@ public class SyncOADataController extends CommonController {
 
 
     /*
-     * @Description TODO 从erp同步收货地址到CRM
+     * @Description TODO 从erp同步到CRM
      * @author lucg.
      * @date 2020/12/3 11:54
      */
@@ -386,13 +666,13 @@ public class SyncOADataController extends CommonController {
                 String custSeq = jsonObject.getString("CustSeq");
                 String CustNum = jsonObject.getString("CustNum");
                 String Name = jsonObject.getString("Name");
-                String addr_1 = jsonObject.getString("Addr_1");
-                String addr_2 = jsonObject.getString("Addr_2");
-                String addr_3 = jsonObject.getString("Addr_3");
-                String addr_4 = jsonObject.getString("Addr_4");
                 String s = addressExisitMap.get(config + "," + CustNum + "," + Name);
                 if (StringUtils.isBlank(s)) {//不存在，创建
                     addressExisitMap.put(config + "," + CustNum + "," + Name, "success");
+                    String addr_1 = jsonObject.getString("Addr_1");
+                    String addr_2 = jsonObject.getString("Addr_2");
+                    String addr_3 = jsonObject.getString("Addr_3");
+                    String addr_4 = jsonObject.getString("Addr_4");
                     String country = jsonObject.getString("Country");
                     String State = jsonObject.getString("State");
                     String City = jsonObject.getString("City");
@@ -433,7 +713,7 @@ public class SyncOADataController extends CommonController {
                     addObject.put("customItem1__c", accountId);
                     addObject.put("customItem11__c", erpId);
                     addObject.put("entityType", 729741452263662L);
-                    addObject.put("name", addr_1 + addr_2 + addr_3 + addr_4);
+                    addObject.put("name", Name);
                     addArray.add(addObject);
                 }
             }
@@ -450,6 +730,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 收票地址初始化
+     *
      * @return
      */
     @RequestMapping("/initReceiptAddress")
@@ -1641,6 +1922,7 @@ public class SyncOADataController extends CommonController {
 //            }
         }
 
+
         if (ERPArray.size() > 0) {
 //            bulkAPI.createDataTaskJob(ERPArray, "customEntity63__c", "insert");
 //            for (int i = 0; i < ERPArray.size(); i++) {
@@ -2087,6 +2369,16 @@ public class SyncOADataController extends CommonController {
         }
     }
 
+
+
+
+
+
+
+
+
+
+
     /*
      * @Description TODO 从erp同步收货地址到CRM
      * @author lucg.
@@ -2267,6 +2559,7 @@ public class SyncOADataController extends CommonController {
             }
         }
 
+
         if (deleteArray.size() > 0) {
             bulkAPI.createDataTaskJob(deleteArray, "customEntity7__c", "delete");
         }
@@ -2278,6 +2571,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 收票地址数据处理
+     *
      * @return
      */
     @RequestMapping("/upateAccountTaxpyerId")
@@ -2289,6 +2583,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 收票地址数据处理
+     *
      * @return
      */
     @RequestMapping("/updateSuccess")
@@ -2311,6 +2606,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 收票地址数据处理
+     *
      * @return
      */
     @RequestMapping("/ReceiptAddressData")
@@ -2329,8 +2625,10 @@ public class SyncOADataController extends CommonController {
         bulkAPI.createDataTaskJob(allByXoqlSample3, "customEntity9__c", "update");
         return null;
     }
+
     /**
      * 收货地址数据处理
+     *
      * @return
      */
     @RequestMapping("/AddressData")
@@ -2349,8 +2647,10 @@ public class SyncOADataController extends CommonController {
         bulkAPI.createDataTaskJob(allByXoqlSample3, "customEntity7__c", "update");
         return null;
     }
+
     /**
      * 账户信息
+     *
      * @return
      */
     @RequestMapping("/BankInfo")
@@ -2373,6 +2673,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 导入价格表
+     *
      * @return
      */
     @RequestMapping("/importPriceBook")
@@ -2431,6 +2732,7 @@ public class SyncOADataController extends CommonController {
             String name = jsonObject.getString("name");
             priceBookMap.put(name + "," + accountId, id);
         }
+
         String productSql = "select id,productName,customItem130__c from product";
         JSONObject byXoqlSimple1 = queryServer.getByXoqlSimple(productSql);
         JSONArray allByXoqlSample1 = queryServer.getAllByXoqlSample(getToken(), byXoqlSimple1, productSql);
@@ -2788,12 +3090,14 @@ public class SyncOADataController extends CommonController {
         if (insertpriceBookEntryArray.size() > 0) {
 //            bulkAPI.createDataTaskJob(insertpriceBookEntryArray, "priceBookEntry", "insert");
         }
+        System.out.println("*******************");
         return null;
     }
 
 
     /**
      * 将有客户编码的客户创建到ERP客户账套模块
+     *
      * @return
      */
     @RequestMapping("/importCredit")
@@ -2944,6 +3248,7 @@ public class SyncOADataController extends CommonController {
         }
         return null;
     }
+
     /**
      * 解析Excel
      *
@@ -2966,8 +3271,10 @@ public class SyncOADataController extends CommonController {
         }
         return null;
     }
+
     /**
      * 将有客户编码的客户创建到ERP客户账套模块
+     *
      * @return
      */
     @RequestMapping("/addAccountToERP")
@@ -3019,6 +3326,7 @@ public class SyncOADataController extends CommonController {
             return sendJson("解析异常：" + e.getMessage(), false);
         }
     }
+
     @RequestMapping("/readApproveXML")
     @ResponseBody
     public String readApproveXML(@RequestBody JSONObject jsonObject) {
@@ -3030,6 +3338,7 @@ public class SyncOADataController extends CommonController {
             return sendJson("解析异常：" + e.getMessage(), false);
         }
     }
+
     //    @RequestMapping("/test1")
 //    @ResponseBody
 //    public String test1(){
@@ -3057,6 +3366,7 @@ public class SyncOADataController extends CommonController {
             return sendJson("解析异常：" + e.getMessage(), false);
         }
     }
+
     @RequestMapping("/readOldXML")
     @ResponseBody
     public String readOldXML(@RequestBody JSONObject jsonObject) {
@@ -3068,6 +3378,7 @@ public class SyncOADataController extends CommonController {
             return sendJson("解析异常：" + e.getMessage(), false);
         }
     }
+
     @RequestMapping("/test")
     @ResponseBody
     public String test() {
@@ -3082,6 +3393,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 根据查询的物料和批次，显示标准及指标信息
+     *
      * @param jsonObject
      * @return
      */
@@ -3146,6 +3458,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 根据查询的物料和批次，显示标准及指标信息
+     *
      * @param jsonObject
      * @return
      */
@@ -3210,8 +3523,10 @@ public class SyncOADataController extends CommonController {
         return result;
 
     }
+
     /**
      * 根据查询的物料和批次，显示标准及指标信息
+     *
      * @param jsonObject
      * @return
      */
@@ -3315,6 +3630,9 @@ public class SyncOADataController extends CommonController {
             return sendJson("查询异常", false, e.getMessage());
         }
     }
+
+
+
     @RequestMapping("/test2")
     @ResponseBody
     public String getLotFeatureSp(String Item, String Lot) {
@@ -3324,8 +3642,10 @@ public class SyncOADataController extends CommonController {
         System.out.println(customNum);
         return customNum;
     }
+
     /**
      * 调用存储过程
+     *
      * @param token
      * @return
      */
@@ -3344,8 +3664,10 @@ public class SyncOADataController extends CommonController {
         JSONArray all = queryServer.getAllByXoqlSample(getToken(), bySql, sql);
         return all;
     }
+
     /**
      * 查询客户标准
+     *
      * @return
      */
     public JSONArray getCustomerStandards() throws Exception {
@@ -3373,8 +3695,10 @@ public class SyncOADataController extends CommonController {
         }
         return responseJSON;
     }
+
     /**
      * 查询企业/行业标准
+     *
      * @return
      */
     public JSONArray getEnterpriseStandards() throws Exception {
@@ -3403,8 +3727,10 @@ public class SyncOADataController extends CommonController {
         }
         return responseJSON;
     }
+
     /**
      * 创建合同到相关
+     *
      * @param param
      * @return
      */
@@ -3462,6 +3788,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 审批 CRM->OA
+     *
      * @param param
      * @return
      */
@@ -3530,6 +3857,7 @@ public class SyncOADataController extends CommonController {
         }
         return data;
     }
+
     public String getArrayToData(JSONObject dataObject, String fieldName) {
         String data = null;
         try {
@@ -3539,6 +3867,7 @@ public class SyncOADataController extends CommonController {
         }
         return data;
     }
+
     public String getSplitData(JSONObject dataObject, String fieldName) {
         String data = null;
         try {
@@ -3562,6 +3891,7 @@ public class SyncOADataController extends CommonController {
         }
         return data;
     }
+
     public Float getFloatData(JSONObject dataObject, String fieldName) {
         Float data = 0F;
         try {
@@ -3571,6 +3901,7 @@ public class SyncOADataController extends CommonController {
         }
         return data;
     }
+
     public String geDateData(JSONObject dataObject, String fieldName) {
         Calendar instance = Calendar.getInstance();
         DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -3588,6 +3919,7 @@ public class SyncOADataController extends CommonController {
 
     /**
      * 保存方法
+     *
      * @param workflowRequestInfo
      * @return
      */
