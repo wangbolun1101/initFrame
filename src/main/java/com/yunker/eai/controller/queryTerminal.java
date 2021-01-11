@@ -55,9 +55,9 @@ public class queryTerminal extends CommonController {
         JSONArray array = JSONArray.parseArray(param);
         for (int i = 0; i < array.size(); i++) {
             JSONObject jsonObject1 = array.getJSONObject(i);
-            String name = jsonObject1.getString("name");//item
-            String content = jsonObject1.getString("content");//玻尿酸
-            String condition = jsonObject1.getString("condition");//1
+            String name = jsonObject1.getString("searchContent");//item
+            String content = jsonObject1.getString("searchName");//玻尿酸
+            String condition = jsonObject1.getString("searchLogic");//1
 
             if (condition != null && condition.equals("1")) {//等于
                 if (where.equals("")) {

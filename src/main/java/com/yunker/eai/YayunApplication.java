@@ -10,7 +10,9 @@ import org.springframework.boot.web.servlet.MultipartConfigFactory;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import javax.servlet.MultipartConfigElement;
 
@@ -40,6 +42,16 @@ public class YayunApplication {
         tomcat.addAdditionalTomcatConnectors(createStandardConnector()); // 添加http
         return tomcat;
     }
+
+    @Bean
+    public TaskScheduler taskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setWaitForTasksToCompleteOnShutdown(true);
+        scheduler.setAwaitTerminationSeconds(1000*60*60);
+        return scheduler;
+    }
+
     //
     // 配置http
     private Connector createStandardConnector() {
