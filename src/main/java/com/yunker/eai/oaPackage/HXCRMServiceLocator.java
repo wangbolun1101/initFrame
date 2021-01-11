@@ -22,8 +22,8 @@ public class HXCRMServiceLocator extends org.apache.axis.client.Service implemen
     }
 
     // Use to get a proxy class for HXCRMServiceHttpPort
-    private java.lang.String HXCRMServiceHttpPort_address = "http://10.10.0.251:8089/services/HXCRMService";
-//    private java.lang.String HXCRMServiceHttpPort_address = "http://bloomageoa.bloomagebiotech.com/services/HXCRMService";
+//    private java.lang.String HXCRMServiceHttpPort_address = "http://10.10.0.251:8089/services/HXCRMService";
+    private java.lang.String HXCRMServiceHttpPort_address = "http://bloomageoa.bloomagebiotech.com/services/HXCRMService";
 
     public java.lang.String getHXCRMServiceHttpPortAddress() {
         return HXCRMServiceHttpPort_address;
