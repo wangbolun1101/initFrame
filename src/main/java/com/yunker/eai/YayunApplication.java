@@ -43,14 +43,7 @@ public class YayunApplication {
         return tomcat;
     }
 
-    @Bean
-    public TaskScheduler taskScheduler() {
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
-        scheduler.setWaitForTasksToCompleteOnShutdown(true);
-        scheduler.setAwaitTerminationSeconds(1000*60*60);
-        return scheduler;
-    }
+
 
     //
     // 配置http
