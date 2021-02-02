@@ -19,7 +19,9 @@ public class DYFSTsynController {
     @RequestMapping("/test")
     @ResponseBody
     public void tset() {
+
         System.out.println("helloworld");
+        System.out.println("helloworld1");
     }
 
 }
